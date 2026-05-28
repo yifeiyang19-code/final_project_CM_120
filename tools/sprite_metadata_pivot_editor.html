@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Sprite Metadata Pivot Editor</title>
+  <style>
+    body { margin: 0; font-family: system-ui, sans-serif; background: #111; color: #eee; }
+    main { display: grid; grid-template-columns: 360px 1fr; min-height: 100vh; }
+    aside { padding: 16px; border-right: 1px solid #333; background: #181818; }
+    canvas { image-rendering: pixelated; background: #222; margin: 24px; border: 1px solid #555; }
+    input, textarea, button { width: 100%; box-sizing: border-box; margin: 6px 0 12px; }
+    textarea { height: 280px; font-family: ui-monospace, monospace; }
+    .hint { color: #aaa; font-size: 13px; line-height: 1.4; }
+  </style>
+</head>
+<body>
+<main>
+  <aside>
+    <h2>Pivot Editor</h2>
+    <label>Spritesheet image</label>
+    <input id="imageInput" type="file" accept="image/*" />
+    <label>Metadata JSON</label>
+    <input id="jsonInput" type="file" accept="application/json,.json" />
+    <label>Frame index</label>
+    <input id="frameIndex" type="number" min="0" value="0" />
+    <button id="copyJson">Copy updated JSON</button>
+    <p class="hint">Click the canvas to set the selected frame's <code>frameOrigin</code>. The red cross is globalOrigin. The cyan cross is the selected frameOrigin.</p>
+    <textarea id="jsonOut"></textarea>
+  </aside>
+  <section>
+    <canvas id="canvas" width="512" height="512"></canvas>
+  </section>
+</main>
+<script>
+const imageInput = document.getElementById('imageInput');
+const jsonInput = document.getElementById('jsonInput');
+const frameIndex = document.getElementById('frameIndex');
+const jsonOut = document.getElementById('jsonOut');
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+let image = null;
+let metadata = null;
+let scale = 4;
+
+function drawCross(x, y, color) {
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(x * scale - 10, y * scale);
+  ctx.lineTo(x * scale + 10, y * scale);
+  ctx.moveTo(x * scale, y * scale - 10);
+  ctx.lineTo(x * scale, y * scale + 10);
+  ctx.stroke();
+}
+
+function currentFrame() {
+  if (!metadata) return null;
+  const i = Number(frameIndex.value || 0);
+  return metadata.frames?.find(f => f.index === i) || metadata.frames?.[i] || null;
+}
+
+function redraw() {
+  if (!image || !metadata) return;
+  const fw = metadata.frameWidth || 128;
+  const fh = metadata.frameHeight || 128;
+  const i = Number(frameIndex.value || 0);
+  const cols = Math.floor(image.width / fw);
+  const sx = (i % cols) * fw;
+  const sy = Math.floor(i / cols) * fh;
+  canvas.width = fw * scale;
+  canvas.height = fh * scale;
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.imageSmoothingEnabled = false;
+  ctx.drawImage(image, sx, sy, fw, fh, 0, 0, fw * scale, fh * scale);
+  const gf = metadata.globalOrigin || { x: fw / 2, y: fh };
+  const fr = currentFrame();
+  drawCross(gf.x, gf.y, '#ff5050');
+  if (fr?.frameOrigin) drawCross(fr.frameOrigin.x, fr.frameOrigin.y, '#50eaff');
+  jsonOut.value = JSON.stringify(metadata, null, 2);
+}
+
+imageInput.addEventListener('change', () => {
+  const file = imageInput.files[0];
+  if (!file) return;
+  image = new Image();
+  image.onload = redraw;
+  image.src = URL.createObjectURL(file);
+});
+
+jsonInput.addEventListener('change', async () => {
+  const file = jsonInput.files[0];
+  if (!file) return;
+  metadata = JSON.parse(await file.text());
+  redraw();
+});
+
+frameIndex.addEventListener('input', redraw);
+canvas.addEventListener('click', (event) => {
+  const rect = canvas.getBoundingClientRect();
+  const x = Math.round((event.clientX - rect.left) / scale);
+  const y = Math.round((event.clientY - rect.top) / scale);
+  const fr = currentFrame();
+  if (!fr) return;
+  fr.frameOrigin = { x, y };
+  redraw();
+});
+copyJson.addEventListener('click', async () => {
+  await navigator.clipboard.writeText(jsonOut.value);
+});
+</script>
+</body>
+</html>

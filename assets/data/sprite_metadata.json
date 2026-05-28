@@ -1,0 +1,806 @@
+{
+  "version": 1,
+  "notes": "Logical sprite registration data. Coordinates are measured in source-frame pixels. globalOrigin defines the stable gameplay pivot for each animation. frameOrigin is the visual pivot of an individual frame. deltaOffset is computed as globalOrigin - frameOrigin. pivotOffset corrects mirrored/rotated sprites without editing source art; soundTriggerFrame marks animation-synchronous audio hooks.",
+  "sprites": {
+    "player": {
+      "frameWidth": 128,
+      "frameHeight": 128,
+      "defaultSequence": "idle",
+      "sequences": {
+        "idle": {
+          "texture": "player_idle",
+          "animation": "player_idle_anim",
+          "globalOrigin": {
+            "x": 46,
+            "y": 116
+          },
+          "frames": [
+            {
+              "index": 0,
+              "frameOrigin": {
+                "x": 46,
+                "y": 116
+              },
+              "interactionBox": {
+                "hitbox": {
+                  "x": 12,
+                  "y": 46,
+                  "w": 34,
+                  "h": 70
+                },
+                "hurtbox": {
+                  "x": 12,
+                  "y": 46,
+                  "w": 34,
+                  "h": 70
+                }
+              },
+              "pivotOffset": {
+                "x": 0,
+                "y": 0
+              }
+            },
+            {
+              "index": 1,
+              "frameOrigin": {
+                "x": 46,
+                "y": 116
+              },
+              "interactionBox": {
+                "hitbox": {
+                  "x": 12,
+                  "y": 46,
+                  "w": 34,
+                  "h": 70
+                },
+                "hurtbox": {
+                  "x": 12,
+                  "y": 46,
+                  "w": 34,
+                  "h": 70
+                }
+              },
+              "pivotOffset": {
+                "x": 0,
+                "y": 0
+              }
+            },
+            {
+              "index": 2,
+              "frameOrigin": {
+                "x": 46,
+                "y": 116
+              },
+              "interactionBox": {
+                "hitbox": {
+                  "x": 12,
+                  "y": 46,
+                  "w": 34,
+                  "h": 70
+                },
+                "hurtbox": {
+                  "x": 12,
+                  "y": 46,
+                  "w": 34,
+                  "h": 70
+                }
+              },
+              "pivotOffset": {
+                "x": 0,
+                "y": 0
+              }
+            },
+            {
+              "index": 3,
+              "frameOrigin": {
+                "x": 46,
+                "y": 116
+              },
+              "interactionBox": {
+                "hitbox": {
+                  "x": 12,
+                  "y": 46,
+                  "w": 34,
+                  "h": 70
+                },
+                "hurtbox": {
+                  "x": 12,
+                  "y": 46,
+                  "w": 34,
+                  "h": 70
+                }
+              },
+              "pivotOffset": {
+                "x": 0,
+                "y": 0
+              }
+            }
+          ],
+          "pivotOffset": {
+            "x": 0,
+            "y": 0
+          }
+        },
+        "walk": {
+          "texture": "player_walk",
+          "animation": "player_walk_anim",
+          "globalOrigin": {
+            "x": 46,
+            "y": 116
+          },
+          "frames": [
+            {
+              "index": 0,
+              "frameOrigin": {
+                "x": 46,
+                "y": 116
+              },
+              "interactionBox": {
+                "hitbox": {
+                  "x": 12,
+                  "y": 46,
+                  "w": 34,
+                  "h": 70
+                }
+              },
+              "pivotOffset": {
+                "x": 0,
+                "y": 0
+              }
+            },
+            {
+              "index": 1,
+              "frameOrigin": {
+                "x": 47,
+                "y": 116
+              },
+              "interactionBox": {
+                "hitbox": {
+                  "x": 13,
+                  "y": 46,
+                  "w": 34,
+                  "h": 70
+                }
+              },
+              "pivotOffset": {
+                "x": 0,
+                "y": 0
+              }
+            },
+            {
+              "index": 2,
+              "frameOrigin": {
+                "x": 48,
+                "y": 116
+              },
+              "interactionBox": {
+                "hitbox": {
+                  "x": 14,
+                  "y": 46,
+                  "w": 34,
+                  "h": 70
+                }
+              },
+              "pivotOffset": {
+                "x": 0,
+                "y": 0
+              }
+            },
+            {
+              "index": 3,
+              "frameOrigin": {
+                "x": 47,
+                "y": 116
+              },
+              "interactionBox": {
+                "hitbox": {
+                  "x": 13,
+                  "y": 46,
+                  "w": 34,
+                  "h": 70
+                }
+              },
+              "pivotOffset": {
+                "x": 0,
+                "y": 0
+              }
+            },
+            {
+              "index": 4,
+              "frameOrigin": {
+                "x": 46,
+                "y": 116
+              },
+              "interactionBox": {
+                "hitbox": {
+                  "x": 12,
+                  "y": 46,
+                  "w": 34,
+                  "h": 70
+                }
+              },
+              "pivotOffset": {
+                "x": 0,
+                "y": 0
+              }
+            },
+            {
+              "index": 5,
+              "frameOrigin": {
+                "x": 45,
+                "y": 116
+              },
+              "interactionBox": {
+                "hitbox": {
+                  "x": 11,
+                  "y": 46,
+                  "w": 34,
+                  "h": 70
+                }
+              },
+              "pivotOffset": {
+                "x": 0,
+                "y": 0
+              }
+            },
+            {
+              "index": 6,
+              "frameOrigin": {
+                "x": 44,
+                "y": 116
+              },
+              "interactionBox": {
+                "hitbox": {
+                  "x": 10,
+                  "y": 46,
+                  "w": 34,
+                  "h": 70
+                }
+              },
+              "pivotOffset": {
+                "x": 0,
+                "y": 0
+              }
+            },
+            {
+              "index": 7,
+              "frameOrigin": {
+                "x": 45,
+                "y": 116
+              },
+              "interactionBox": {
+                "hitbox": {
+                  "x": 11,
+                  "y": 46,
+                  "w": 34,
+                  "h": 70
+                }
+              },
+              "pivotOffset": {
+                "x": 0,
+                "y": 0
+              }
+            }
+          ],
+          "pivotOffset": {
+            "x": 0,
+            "y": 0
+          }
+        },
+        "run": {
+          "texture": "player_run",
+          "animation": "player_run_anim",
+          "globalOrigin": {
+            "x": 46,
+            "y": 116
+          },
+          "frames": [
+            {
+              "index": 0,
+              "frameOrigin": {
+                "x": 46,
+                "y": 116
+              },
+              "interactionBox": {
+                "hitbox": {
+                  "x": 12,
+                  "y": 46,
+                  "w": 34,
+                  "h": 70
+                }
+              },
+              "pivotOffset": {
+                "x": 0,
+                "y": 0
+              }
+            },
+            {
+              "index": 1,
+              "frameOrigin": {
+                "x": 49,
+                "y": 116
+              },
+              "interactionBox": {
+                "hitbox": {
+                  "x": 15,
+                  "y": 46,
+                  "w": 34,
+                  "h": 70
+                }
+              },
+              "pivotOffset": {
+                "x": 0,
+                "y": 0
+              },
+              "soundTriggerFrame": "footstep"
+            },
+            {
+              "index": 2,
+              "frameOrigin": {
+                "x": 51,
+                "y": 116
+              },
+              "interactionBox": {
+                "hitbox": {
+                  "x": 17,
+                  "y": 46,
+                  "w": 34,
+                  "h": 70
+                }
+              },
+              "pivotOffset": {
+                "x": 0,
+                "y": 0
+              }
+            },
+            {
+              "index": 3,
+              "frameOrigin": {
+                "x": 49,
+                "y": 116
+              },
+              "interactionBox": {
+                "hitbox": {
+                  "x": 15,
+                  "y": 46,
+                  "w": 34,
+                  "h": 70
+                }
+              },
+              "pivotOffset": {
+                "x": 0,
+                "y": 0
+              }
+            },
+            {
+              "index": 4,
+              "frameOrigin": {
+                "x": 46,
+                "y": 116
+              },
+              "interactionBox": {
+                "hitbox": {
+                  "x": 12,
+                  "y": 46,
+                  "w": 34,
+                  "h": 70
+                }
+              },
+              "pivotOffset": {
+                "x": 0,
+                "y": 0
+              },
+              "soundTriggerFrame": "footstep"
+            },
+            {
+              "index": 5,
+              "frameOrigin": {
+                "x": 43,
+                "y": 116
+              },
+              "interactionBox": {
+                "hitbox": {
+                  "x": 9,
+                  "y": 46,
+                  "w": 34,
+                  "h": 70
+                }
+              },
+              "pivotOffset": {
+                "x": 0,
+                "y": 0
+              }
+            },
+            {
+              "index": 6,
+              "frameOrigin": {
+                "x": 41,
+                "y": 116
+              },
+              "interactionBox": {
+                "hitbox": {
+                  "x": 7,
+                  "y": 46,
+                  "w": 34,
+                  "h": 70
+                }
+              },
+              "pivotOffset": {
+                "x": 0,
+                "y": 0
+              }
+            }
+          ],
+          "pivotOffset": {
+            "x": 0,
+            "y": 0
+          }
+        },
+        "jump": {
+          "texture": "player_jump",
+          "animation": "player_jump_anim",
+          "globalOrigin": {
+            "x": 46,
+            "y": 116
+          },
+          "frames": [
+            {
+              "index": 0,
+              "frameOrigin": {
+                "x": 46,
+                "y": 116
+              },
+              "interactionBox": {
+                "hitbox": {
+                  "x": 12,
+                  "y": 46,
+                  "w": 34,
+                  "h": 70
+                }
+              },
+              "pivotOffset": {
+                "x": 0,
+                "y": 0
+              },
+              "soundTriggerFrame": "jump_start"
+            },
+            {
+              "index": 1,
+              "frameOrigin": {
+                "x": 46,
+                "y": 115
+              },
+              "interactionBox": {
+                "hitbox": {
+                  "x": 12,
+                  "y": 45,
+                  "w": 34,
+                  "h": 70
+                }
+              },
+              "pivotOffset": {
+                "x": 0,
+                "y": 0
+              }
+            },
+            {
+              "index": 2,
+              "frameOrigin": {
+                "x": 47,
+                "y": 114
+              },
+              "interactionBox": {
+                "hitbox": {
+                  "x": 13,
+                  "y": 44,
+                  "w": 34,
+                  "h": 70
+                }
+              },
+              "pivotOffset": {
+                "x": 0,
+                "y": 0
+              }
+            },
+            {
+              "index": 3,
+              "frameOrigin": {
+                "x": 47,
+                "y": 114
+              },
+              "interactionBox": {
+                "hitbox": {
+                  "x": 13,
+                  "y": 44,
+                  "w": 34,
+                  "h": 70
+                }
+              },
+              "pivotOffset": {
+                "x": 0,
+                "y": 0
+              }
+            },
+            {
+              "index": 4,
+              "frameOrigin": {
+                "x": 46,
+                "y": 115
+              },
+              "interactionBox": {
+                "hitbox": {
+                  "x": 12,
+                  "y": 45,
+                  "w": 34,
+                  "h": 70
+                }
+              },
+              "pivotOffset": {
+                "x": 0,
+                "y": 0
+              }
+            },
+            {
+              "index": 5,
+              "frameOrigin": {
+                "x": 46,
+                "y": 116
+              },
+              "interactionBox": {
+                "hitbox": {
+                  "x": 12,
+                  "y": 46,
+                  "w": 34,
+                  "h": 70
+                }
+              },
+              "pivotOffset": {
+                "x": 0,
+                "y": 0
+              }
+            }
+          ],
+          "pivotOffset": {
+            "x": 0,
+            "y": 0
+          }
+        },
+        "hurt": {
+          "texture": "player_hurt",
+          "animation": "player_hurt_anim",
+          "globalOrigin": {
+            "x": 46,
+            "y": 116
+          },
+          "actionLockMs": 180,
+          "frames": [
+            {
+              "index": 0,
+              "frameOrigin": {
+                "x": 46,
+                "y": 116
+              },
+              "interactionBox": {
+                "hitbox": {
+                  "x": 12,
+                  "y": 46,
+                  "w": 34,
+                  "h": 70
+                }
+              },
+              "pivotOffset": {
+                "x": 0,
+                "y": 0
+              }
+            },
+            {
+              "index": 1,
+              "frameOrigin": {
+                "x": 49,
+                "y": 116
+              },
+              "interactionBox": {
+                "hitbox": {
+                  "x": 15,
+                  "y": 46,
+                  "w": 34,
+                  "h": 70
+                }
+              },
+              "pivotOffset": {
+                "x": 0,
+                "y": 0
+              }
+            }
+          ],
+          "pivotOffset": {
+            "x": 0,
+            "y": 0
+          }
+        },
+        "dead": {
+          "texture": "player_dead",
+          "animation": "player_dead_anim",
+          "globalOrigin": {
+            "x": 46,
+            "y": 116
+          },
+          "frames": [
+            {
+              "index": 0,
+              "frameOrigin": {
+                "x": 46,
+                "y": 116
+              },
+              "interactionBox": {
+                "hitbox": {
+                  "x": 12,
+                  "y": 46,
+                  "w": 34,
+                  "h": 70
+                }
+              },
+              "pivotOffset": {
+                "x": 0,
+                "y": 0
+              }
+            }
+          ],
+          "pivotOffset": {
+            "x": 0,
+            "y": 0
+          }
+        }
+      }
+    },
+    "boss": {
+      "frameWidth": 96,
+      "frameHeight": 96,
+      "defaultSequence": "idle",
+      "sequences": {
+        "idle": {
+          "texture": "blue_idle",
+          "animation": "blue_idle_anim",
+          "globalOrigin": {
+            "x": 48,
+            "y": 90
+          },
+          "frames": [
+            {
+              "index": 0,
+              "frameOrigin": {
+                "x": 48,
+                "y": 90
+              },
+              "interactionBox": {
+                "hitbox": {
+                  "x": 22,
+                  "y": 16,
+                  "w": 52,
+                  "h": 78
+                }
+              },
+              "pivotOffset": {
+                "x": 0,
+                "y": 0
+              }
+            },
+            {
+              "index": 1,
+              "frameOrigin": {
+                "x": 48,
+                "y": 90
+              },
+              "interactionBox": {
+                "hitbox": {
+                  "x": 22,
+                  "y": 16,
+                  "w": 52,
+                  "h": 78
+                }
+              },
+              "pivotOffset": {
+                "x": 0,
+                "y": 0
+              }
+            },
+            {
+              "index": 2,
+              "frameOrigin": {
+                "x": 48,
+                "y": 90
+              },
+              "interactionBox": {
+                "hitbox": {
+                  "x": 22,
+                  "y": 16,
+                  "w": 52,
+                  "h": 78
+                }
+              },
+              "pivotOffset": {
+                "x": 0,
+                "y": 0
+              }
+            },
+            {
+              "index": 3,
+              "frameOrigin": {
+                "x": 48,
+                "y": 90
+              },
+              "interactionBox": {
+                "hitbox": {
+                  "x": 22,
+                  "y": 16,
+                  "w": 52,
+                  "h": 78
+                }
+              },
+              "pivotOffset": {
+                "x": 0,
+                "y": 0
+              }
+            }
+          ],
+          "pivotOffset": {
+            "x": 0,
+            "y": 0
+          }
+        },
+        "land": {
+          "texture": "blue_land",
+          "animation": "blue_land_anim",
+          "globalOrigin": {
+            "x": 48,
+            "y": 90
+          },
+          "frames": [
+            {
+              "index": 0,
+              "frameOrigin": {
+                "x": 48,
+                "y": 90
+              },
+              "interactionBox": {
+                "hitbox": {
+                  "x": 22,
+                  "y": 16,
+                  "w": 52,
+                  "h": 78
+                }
+              },
+              "pivotOffset": {
+                "x": 0,
+                "y": 0
+              }
+            },
+            {
+              "index": 5,
+              "frameOrigin": {
+                "x": 48,
+                "y": 90
+              },
+              "interactionBox": {
+                "hitbox": {
+                  "x": 22,
+                  "y": 16,
+                  "w": 52,
+                  "h": 78
+                }
+              },
+              "pivotOffset": {
+                "x": 0,
+                "y": 0
+              }
+            }
+          ],
+          "pivotOffset": {
+            "x": 0,
+            "y": 0
+          }
+        }
+      }
+    }
+  }
+}

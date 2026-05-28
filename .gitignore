@@ -1,0 +1,18 @@
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Local servers / logs
+*.log
+npm-debug.log*
+
+# Build / dependency output
+node_modules/
+dist/
+build/
+coverage/
+
+# Temporary generated metadata
+tools/*_metadata.json
