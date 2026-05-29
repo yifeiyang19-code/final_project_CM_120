@@ -25,13 +25,13 @@ export default class HolyClearance {
     const playerFast = Math.abs(playerBody?.velocity?.x || 0) > 240 || Math.abs(playerBody?.velocity?.y || 0) > 320;
     const playerAirborne = !playerBody?.blocked?.down && !playerBody?.touching?.down;
     const volleyCount = scene.bossPhase >= 4
-      ? playerFast || playerAirborne ? 7 : 6
+      ? playerFast || playerAirborne ? 3 : 2
       : scene.bossPhase >= 3
-        ? playerFast || playerAirborne ? 4 : 3
+        ? 2
         : scene.bossPhase >= 2
-          ? playerFast || playerAirborne ? 3 : 2
+          ? 1
           : 1;
-    const delayBetween = scene.bossPhase >= 4 ? 260 : scene.bossPhase >= 3 ? 380 : scene.bossPhase >= 2 ? 470 : 620;
+    const delayBetween = scene.bossPhase >= 4 ? 620 : scene.bossPhase >= 3 ? 720 : scene.bossPhase >= 2 ? 820 : 900;
 
     if (scene.anims.exists("boss_attack_anim")) {
       scene.boss.play("boss_attack_anim", true);
@@ -71,17 +71,14 @@ export default class HolyClearance {
     const scene = this.scene;
 
     if (scene.bossPhase >= 4) {
-      if (playerFast || playerAirborne) return index % 2 === 0 ? 4 : 3;
-      return index % 2 === 0 ? 3 : 2;
+      return playerFast || playerAirborne ? 2 : 1;
     }
 
     if (scene.bossPhase >= 3) {
-      if (playerFast || playerAirborne) return index % 2 === 0 ? 3 : 2;
-      return index % 2 === 0 ? 2 : 1;
+      return playerFast || playerAirborne ? 2 : 1;
     }
 
     if (scene.bossPhase >= 2) {
-      if (playerFast || playerAirborne) return index % 2 === 0 ? 2 : 1;
       return 1;
     }
 
@@ -118,17 +115,17 @@ export default class HolyClearance {
     const startY = scene.boss.y - 20;
     const player = scene.player;
     const body = player?.body;
-    const speed = scene.bossPhase >= 4 ? 610 : scene.bossPhase >= 3 ? 510 : scene.bossPhase >= 2 ? 430 : 360;
-    const leadTime = scene.bossPhase >= 4 ? 0.56 : scene.bossPhase >= 3 ? 0.40 : scene.bossPhase >= 2 ? 0.30 : 0.14;
-    const leadX = Phaser.Math.Clamp((body?.velocity?.x || 0) * leadTime, -190, 190);
-    const leadY = Phaser.Math.Clamp((body?.velocity?.y || 0) * leadTime, -160, 160);
+    const speed = scene.bossPhase >= 4 ? 340 : scene.bossPhase >= 3 ? 310 : scene.bossPhase >= 2 ? 285 : 260;
+    const leadTime = scene.bossPhase >= 4 ? 0.18 : scene.bossPhase >= 3 ? 0.14 : scene.bossPhase >= 2 ? 0.10 : 0.06;
+    const leadX = Phaser.Math.Clamp((body?.velocity?.x || 0) * leadTime, -100, 100);
+    const leadY = Phaser.Math.Clamp((body?.velocity?.y || 0) * leadTime, -90, 90);
     const alternatingOffset = (volleyIndex - (volleyTotal - 1) / 2) * (scene.bossPhase >= 3 ? 18 : 10);
     const targetX = player.x + leadX + alternatingOffset;
     const targetY = player.y - 20 + leadY * 0.45;
 
     const baseAngle = Phaser.Math.Angle.Between(startX, startY, targetX, targetY);
     const bulletKey = Phaser.Utils.Array.GetRandom(scene.bossBulletKeys);
-    const spread = Phaser.Math.DegToRad(scene.bossPhase >= 3 ? 12 : scene.bossPhase >= 2 ? 9 : 10);
+    const spread = Phaser.Math.DegToRad(scene.bossPhase >= 3 ? 9 : scene.bossPhase >= 2 ? 7 : 8);
 
     scene.playBossEnergyEffect(
       scene.bossPhase >= 3 ? 0xff3333 : 0x7df9ff,
@@ -144,7 +141,7 @@ export default class HolyClearance {
       const bullet = scene.physics.add.sprite(startX, startY, bulletKey);
       scene.trackHostileObject?.(bullet);
 
-      bullet.setScale(scene.bossPhase >= 3 ? 1.08 : scene.bossPhase >= 2 ? 0.98 : 0.9);
+      bullet.setScale(scene.bossPhase >= 3 ? 0.9 : scene.bossPhase >= 2 ? 0.84 : 0.78);
       bullet.setDepth(50);
       bullet.body.allowGravity = false;
       bullet.rotation = angle;
@@ -152,7 +149,7 @@ export default class HolyClearance {
       bullet.__lastY = startY;
 
       if (bullet.body) {
-        const radius = scene.bossPhase >= 3 ? 5 : 4;
+        const radius = scene.bossPhase >= 3 ? 4 : 3;
         const size = radius * 2;
         bullet.body.setSize(size, size, true);
         if (bullet.body.setCircle) {
@@ -161,8 +158,8 @@ export default class HolyClearance {
       }
 
       bullet.setVelocity(Math.cos(angle) * speed, Math.sin(angle) * speed);
-      bullet.__treeBlockInflateX = scene.bossPhase >= 3 ? 40 : 32;
-      bullet.__treeBlockInflateY = scene.bossPhase >= 3 ? 40 : 32;
+      bullet.__treeBlockInflateX = 240;
+      bullet.__treeBlockInflateY = 220;
 
       scene.registerProjectileVsTrees?.(bullet, 1, true);
 

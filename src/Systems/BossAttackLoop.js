@@ -122,8 +122,12 @@ export default class BossAttackLoop {
         new ActionNode(() => this.action("rayOfOblivion", 126, "ultimate airborne execution"))
       ]),
       new SequenceNode([
-        new ConditionNode((ctx) => ctx.phase >= 4 && this.isReady("holyClearance", ctx)),
-        new ActionNode(() => this.action("holyClearance", 122, "ultimate suppression"))
+        new ConditionNode((ctx) => ctx.phase >= 4 && ctx.distance < 620 && this.isReady("menacingAdvance", ctx)),
+        new ActionNode(() => this.action("menacingAdvance", 132, "ultimate collision intercept"))
+      ]),
+      new SequenceNode([
+        new ConditionNode((ctx) => ctx.phase >= 4 && ctx.timeSinceHoly > 12000 && this.isReady("holyClearance", ctx)),
+        new ActionNode(() => this.action("holyClearance", 74, "limited ultimate suppression"))
       ]),
       new SequenceNode([
         new ConditionNode((ctx) => ctx.phase >= 2 && ctx.playerGroupedInOpenLane && ctx.safeToUseLongCast && this.isReady("purgeProtocol", ctx)),
@@ -134,16 +138,16 @@ export default class BossAttackLoop {
         new ActionNode(() => this.action("purgeProtocol", 88, "predict sustained ground route"))
       ]),
       new SequenceNode([
-        new ConditionNode((ctx) => ctx.phase >= 2 && ctx.playerSeekingHealth && this.isReady("holyClearance", ctx)),
-        new ActionNode(() => this.action("holyClearance", 104, "deny recovery route"))
+        new ConditionNode((ctx) => ctx.phase >= 2 && ctx.playerSeekingHealth && ctx.timeSinceHoly > 14500 && this.isReady("holyClearance", ctx)),
+        new ActionNode(() => this.action("holyClearance", 72, "deny recovery route"))
       ]),
       new SequenceNode([
-        new ConditionNode((ctx) => ctx.phase >= 2 && ctx.playerFast && ctx.distance > 300 && this.isReady("holyClearance", ctx)),
-        new ActionNode(() => this.action("holyClearance", 98, "suppress high mobility"))
+        new ConditionNode((ctx) => ctx.phase >= 2 && ctx.playerFast && ctx.distance > 360 && ctx.timeSinceHoly > 14500 && this.isReady("holyClearance", ctx)),
+        new ActionNode(() => this.action("holyClearance", 66, "suppress high mobility"))
       ]),
       new SequenceNode([
-        new ConditionNode((ctx) => ctx.phase >= 2 && ctx.playerOnLadder && this.isReady("holyClearance", ctx)),
-        new ActionNode(() => this.action("holyClearance", 96, "punish vertical route"))
+        new ConditionNode((ctx) => ctx.phase >= 2 && ctx.playerOnLadder && ctx.timeSinceHoly > 14500 && this.isReady("holyClearance", ctx)),
+        new ActionNode(() => this.action("holyClearance", 64, "punish vertical route"))
       ]),
       new SequenceNode([
         new ConditionNode((ctx) => ctx.phase >= 3 && ctx.playerLowHp && this.isReady("menacingAdvance", ctx)),
@@ -206,12 +210,13 @@ export default class BossAttackLoop {
       this.action("annihilationSlash", 46, "close slash threat"),
       this.action("purgeProtocol", 44, "aerial lockdown"),
       this.action("massEnergyTurrets", phase >= 2 ? 62 : 38, "area control"),
-      this.action("gravityField", 36, "center containment")
+      this.action("gravityField", 36, "center containment"),
+      this.action("rayOfOblivion", phase >= 3 ? 50 : 34, "tracking line-of-sight pressure")
     ];
 
     if (phase >= 2) {
       actions.push(
-        this.action("holyClearance", 50, "projectile suppression"),
+        this.action("holyClearance", 28, "projectile suppression"),
         this.action("groundSuppression", 40, "ground sweep"),
         this.action("phaseTwoPressureCombo", 44, "combo pressure")
       );
@@ -227,8 +232,8 @@ export default class BossAttackLoop {
 
     if (phase >= 4) {
       actions.push(
-        this.action("massEnergyTurrets", 88, "ultimate turret lockdown"),
-        this.action("holyClearance", 82, "ultimate suppression"),
+        this.action("massEnergyTurrets", 54, "ultimate turret lockdown"),
+        this.action("holyClearance", 36, "ultimate suppression"),
         this.action("purgeProtocol", 78, "ultimate aerial lockdown"),
         this.action("rayOfOblivion", 80, "ultimate beam lock"),
         this.action("annihilationSlash", 76, "ultimate blade protocol")
@@ -250,7 +255,7 @@ export default class BossAttackLoop {
     if (ctx.playerGrounded) {
       if (["annihilationSlash", "menacingAdvance", "groundSuppression"].includes(action.key)) score += 18;
       if (action.key === "purgeProtocol" && ctx.playerPredictableGroundRun) score += 22;
-      if (ctx.phase >= 2 && action.key === "holyClearance" && ctx.speedX > 180) score += 12;
+      if (ctx.phase >= 2 && action.key === "holyClearance" && ctx.speedX > 180) score += 4;
     }
 
     if (ctx.distance > 560) {
@@ -260,18 +265,18 @@ export default class BossAttackLoop {
 
     if (ctx.distance < 270) {
       if (["annihilationSlash", "menacingAdvance", "gravityField"].includes(action.key)) score += 22;
-      if (action.key === "holyClearance" && ctx.playerFast) score += 8;
+      if (action.key === "holyClearance" && ctx.playerFast) score += 2;
       if (action.key === "massEnergyTurrets") score += ctx.phase >= 4 ? 4 : -8;
     }
 
     if (ctx.hasTrees) {
       if (["annihilationSlash", "destructionBlast", "rayOfOblivion"].includes(action.key)) score += 18;
-      if (action.key === "holyClearance") score += ctx.phase >= 3 ? 6 : -6;
+      if (action.key === "holyClearance") score -= 10;
     }
 
     if (ctx.playerLowHp) {
       if (["menacingAdvance", "holyClearance", "rayOfOblivion"].includes(action.key)) score += 18;
-      if (ctx.playerSeekingHealth && action.key === "holyClearance") score += 28;
+      if (ctx.playerSeekingHealth && action.key === "holyClearance") score += 6;
       if (action.key === "massEnergyTurrets") score += ctx.phase >= 4 ? 8 : -6;
     }
 
@@ -305,13 +310,15 @@ export default class BossAttackLoop {
       if (["rayOfOblivion", "holyClearance", "destructionBlast"].includes(action.key)) score += 18;
     }
 
-    if (ctx.holyDebtHigh && action.key === "holyClearance") score += 20;
-    if (ctx.activeTurrets === 0 && action.key === "massEnergyTurrets") score += ctx.phase >= 4 ? 46 : ctx.phase >= 2 ? 36 : 18;
+    if (ctx.holyDebtHigh && action.key === "holyClearance") score += 4;
+    if (ctx.activeTurrets === 0 && action.key === "massEnergyTurrets") score += ctx.phase >= 4 ? 18 : ctx.phase >= 2 ? 20 : 10;
+    if (action.key === "menacingAdvance") score += ctx.phase >= 4 ? 34 : ctx.phase >= 3 ? 24 : ctx.phase >= 2 ? 14 : 0;
     if (ctx.activeTurrets > 0 && action.key === "massEnergyTurrets") score -= 38;
 
     if (ctx.phase >= 4) {
-      if (["holyClearance", "purgeProtocol", "rayOfOblivion", "annihilationSlash", "phaseThreePressureCombo"].includes(action.key)) score += 24;
-      if (action.key === "massEnergyTurrets") score += 30;
+      if (["purgeProtocol", "rayOfOblivion", "annihilationSlash", "phaseThreePressureCombo"].includes(action.key)) score += 20;
+      if (action.key === "holyClearance") score -= 18;
+      if (action.key === "massEnergyTurrets") score += 4;
       score += Math.random() * 12;
     } else if (ctx.phase >= 3) score += Math.random() * 7;
     else score += Math.random() * 5;
@@ -457,21 +464,21 @@ export default class BossAttackLoop {
     const base = {
       destructionBlast: 7000,
       annihilationSlash: 7400,
-      massEnergyTurrets: phase >= 4 ? 9400 : phase >= 2 ? 7600 : 11800,
+      massEnergyTurrets: phase >= 4 ? 13500 : phase >= 2 ? 12800 : 15000,
       gravityField: 14200,
       purgeProtocol: 11800,
       groundSuppression: 9400,
       phaseTwoPressureCombo: 14500,
       phaseThreePressureCombo: 13500,
-      rayOfOblivion: 10500,
-      holyClearance: 6600,
-      menacingAdvance: 9400
+      rayOfOblivion: phase >= 1 ? 9800 : 10500,
+      holyClearance: 17800,
+      menacingAdvance: 6400
     }[key] || 8500;
 
-    if (phase >= 4) return base * 0.84;
+    if (phase >= 4) return base * 0.9;
     if (phase >= 3) return base * 1.35;
-    if (phase >= 2) return base * 1.05;
-    return base * 1.65;
+    if (phase >= 2) return base * 1.15;
+    return base * 1.45;
   }
 
   getNextDecisionDelay(action, context) {
@@ -479,19 +486,19 @@ export default class BossAttackLoop {
     const base = {
       destructionBlast: 5100,
       annihilationSlash: 4700,
-      massEnergyTurrets: context.phase >= 4 ? 5600 : context.phase >= 2 ? 5000 : 6200,
+      massEnergyTurrets: context.phase >= 4 ? 7600 : context.phase >= 2 ? 7600 : 7600,
       gravityField: 7400,
       purgeProtocol: 7600,
       groundSuppression: 4200,
       phaseTwoPressureCombo: 6200,
       phaseThreePressureCombo: 6200,
       rayOfOblivion: 4800,
-      holyClearance: 3600,
-      menacingAdvance: 4200
+      holyClearance: 6200,
+      menacingAdvance: 3000
     }[action.key] || 4800;
 
-    const phasePressure = context.phase >= 4 ? 0.92 : context.phase >= 3 ? 1.22 : context.phase >= 2 ? 0.95 : 1.55;
-    return Math.max(context.phase >= 4 ? 2600 : 3600, base * m * phasePressure);
+    const phasePressure = context.phase >= 4 ? 1.02 : context.phase >= 3 ? 1.22 : context.phase >= 2 ? 0.98 : 1.55;
+    return Math.max(context.phase >= 4 ? 2850 : 3600, base * m * phasePressure);
   }
 
   castAction(action) {

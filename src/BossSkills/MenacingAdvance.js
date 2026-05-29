@@ -7,13 +7,13 @@ export default class MenacingAdvance {
     this.chargeHitbox = null;
     this.chargeOverlap = null;
 
-    this.approachDuration = 340;
-    this.warningDuration = 760;
-    this.chargeDuration = 230;
-    this.recoveryDuration = 260;
+    this.approachDuration = 300;
+    this.warningDuration = 660;
+    this.chargeDuration = 250;
+    this.recoveryDuration = 220;
 
     this.approachDistance = 260;
-    this.chargeDistance = 540;
+    this.chargeDistance = 600;
     this.chargeDamage = 1;
 
     this.lastAfterimageTime = 0;
@@ -248,6 +248,7 @@ export default class MenacingAdvance {
     scene.time.delayedCall(50, () => this.createHardAfterimage());
 
     this.startAfterimageTrail();
+    this.tryAttachOblivionRayDuringCharge();
 
     scene.tweens.add({
       targets: scene.boss,
@@ -269,6 +270,23 @@ export default class MenacingAdvance {
         this.updateChargeHitbox();
         this.finishChargeImpact(dashEndX, dashEndY);
       }
+    });
+  }
+
+  tryAttachOblivionRayDuringCharge() {
+    const scene = this.scene;
+    if (!scene.skills?.rayOfOblivion) return;
+    const now = scene.time.now || 0;
+    const cooldown = scene.bossPhase >= 4 ? 5200 : scene.bossPhase >= 3 ? 6200 : scene.bossPhase >= 2 ? 7200 : 9000;
+    if (scene.lastAttachedOblivionRayAt && now - scene.lastAttachedOblivionRayAt < cooldown) return;
+
+    const chance = scene.bossPhase >= 4 ? 0.42 : scene.bossPhase >= 3 ? 0.3 : scene.bossPhase >= 2 ? 0.22 : 0.14;
+    if (Math.random() > chance) return;
+    scene.lastAttachedOblivionRayAt = now;
+
+    scene.time.delayedCall(120, () => {
+      if (!scene.boss || !scene.boss.active || scene.gameOver || scene.isPhaseTransitioning) return;
+      scene.skills.rayOfOblivion.cast({ attachedToBoss: true, noCastingLock: true });
     });
   }
 

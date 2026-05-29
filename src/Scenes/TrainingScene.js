@@ -48,12 +48,9 @@ export default class TrainingScene extends BossScene {
   }
 
   startBossAttackLoop() {
-    
-    
   }
 
   updateBossPatrol() {
-    
   }
 
   updateBossIntegrity() {
@@ -64,7 +61,6 @@ export default class TrainingScene extends BossScene {
   }
 
   damageBossIntegrity() {
-    
   }
 
   damagePlayer(amount = 1) {
@@ -82,7 +78,6 @@ export default class TrainingScene extends BossScene {
   }
 
   failTrial() {
-    
     this.trainingHitCount += 1;
     this.trainingInvulnerableUntil = (this.time?.now || 0) + 650;
     this.playPlayerDamageFeedback();
@@ -105,34 +100,19 @@ export default class TrainingScene extends BossScene {
     if (this.__returningToMenu) return;
     this.__returningToMenu = true;
 
-    
-    
-    
-    
-    
     this.forceResumeSceneClock?.();
-    if (this.physics?.world) {
-      this.physics.world.timeScale = 1;
-      this.physics.world.resume?.();
-    }
-    if (this.time) this.time.timeScale = 1;
-
+    this.hidePauseMenu?.();
     this.trainingLoopEvent?.remove(false);
     this.trainingLoopEvent = null;
     this.trainingSelector?.setVisible(false);
     this.controlsLocked = true;
 
     try {
-      this.stopAllBossActions?.({
-        clearHostiles: true,
-        clearTurrets: true,
-        keepGravityField: false,
-        freezeBoss: true
-      });
-      this.cleanupAllBattleObjects?.();
-      this.bgm?.fadeOut?.(80);
-    } catch (error) {
-      console.warn("[TrainingScene] Recovered while returning to menu", error);
+      this.cameras?.main?.resetFX?.();
+      this.physics?.world?.resume?.();
+      this.bgm?.destroy?.();
+      this.audioCues?.stop?.();
+    } catch (_error) {
     }
 
     if (typeof window !== "undefined" && window.location?.reload) {
@@ -140,7 +120,7 @@ export default class TrainingScene extends BossScene {
       return;
     }
 
-    this.scene.start("MenuScene");
+    this.scene.start("MenuScene", { fromTraining: true });
   }
 
   createTrainingOverlay() {

@@ -7,8 +7,8 @@ export default class BlessingTreeAbility {
     this.pointerStart = null;
     this.activeTrees = [];
 
-    this.treeBodyWidth = 42;
-    this.treeBodyHeight = 96;
+    this.treeBodyWidth = 58;
+    this.treeBodyHeight = 112;
 
     this.maxCharges = this.config.blessingTreeMaxCharges ?? 2;
     this.charges = this.maxCharges;

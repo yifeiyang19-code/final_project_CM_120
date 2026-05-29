@@ -690,8 +690,8 @@ export default class BossScene extends Phaser.Scene {
     const travelLine = new Phaser.Geom.Line(sx, sy, ex, ey);
     const projectileBounds = projectile.getBounds?.();
 
-    const inflateX = options.inflateX ?? projectile.__treeBlockInflateX ?? 18;
-    const inflateY = options.inflateY ?? projectile.__treeBlockInflateY ?? 18;
+    const inflateX = options.inflateX ?? projectile.__treeBlockInflateX ?? 120;
+    const inflateY = options.inflateY ?? projectile.__treeBlockInflateY ?? 140;
     const requireBetween = options.requireBetween === true;
 
     for (const tree of trees) {
@@ -740,7 +740,7 @@ export default class BossScene extends Phaser.Scene {
 
     if (!bounds) return null;
 
-    Phaser.Geom.Rectangle.Inflate(bounds, inflateX, inflateY);
+    Phaser.Geom.Rectangle.Inflate(bounds, Math.max(inflateX, 96), Math.max(inflateY, 120));
     return bounds;
   }
 
@@ -771,7 +771,7 @@ export default class BossScene extends Phaser.Scene {
     const closestX = ax + abx * t;
     const closestY = ay + aby * t;
     const distance = Phaser.Math.Distance.Between(px, py, closestX, closestY);
-    const allowed = Math.max(bounds.width, bounds.height) * 0.50;
+    const allowed = Math.max(bounds.width, bounds.height) * 0.72;
 
     return distance <= allowed;
   }
@@ -818,7 +818,7 @@ export default class BossScene extends Phaser.Scene {
     for (const tree of trees) {
       if (!tree || !tree.active || !tree.blessingTree) continue;
 
-      const bounds = tree.getBounds();
+      const bounds = this.getTreeBlockBounds?.(tree, 150, 170) || tree.getBounds();
       const hit = Phaser.Geom.Intersects.LineToRectangle(line, bounds);
 
       if (!hit) continue;

@@ -148,6 +148,8 @@ export default class MenuScene extends Phaser.Scene {
 
 
   createMenuUtilityButtons() {
+    if (this.menuUtilityButtonsCreated) return;
+    this.menuUtilityButtonsCreated = true;
     const makeButton = (x, y, label, callback) => {
       const rect = this.add.rectangle(x, y, 168, 44, 0x062536, 0.92)
         .setScrollFactor(0)
@@ -650,6 +652,7 @@ export default class MenuScene extends Phaser.Scene {
   }
 
   startPlayableOpening() {
+    this.createMenuUtilityButtons();
     this.startTreeTutorial();
   }
 
