@@ -64,12 +64,12 @@ export default class MassEnergyTurretsSkill {
     const turretCount = this.getTurretCountByPhase();
 
     const duration = scene.bossPhase >= 4
-      ? 7600
+      ? 8600
       : scene.bossPhase >= 3
-        ? 7200
+        ? 8200
         : scene.bossPhase >= 2
-          ? 6600
-          : 6200;
+          ? 7600
+          : 7000;
 
     const positions = [];
 
@@ -91,10 +91,10 @@ export default class MassEnergyTurretsSkill {
       turret.canPierceTiles = false;
       turret.isOvercharged = false;
       turret.fireDelay = scene.bossPhase >= 3
-        ? 1280
+        ? 1120
         : scene.bossPhase >= 2
-          ? 1460
-          : 1500;
+          ? 1280
+          : 1360;
 
       turret.setTint(0x99ccff);
 
@@ -163,10 +163,10 @@ export default class MassEnergyTurretsSkill {
     }
 
     turret.fireDelay = scene.bossPhase >= 3
-      ? 1680
+      ? 1420
       : scene.bossPhase >= 2
-        ? 1820
-        : 1900;
+        ? 1560
+        : 1660;
 
     turret.fireEvent = scene.time.addEvent({
       delay: turret.fireDelay,

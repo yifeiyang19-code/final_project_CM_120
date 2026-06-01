@@ -1,7 +1,7 @@
 export default class PhaseAtmosphereManager {
   constructor(scene) {
     this.scene = scene;
-    this.phase = 1;
+    this.phase = 0;
 
     this.darkOverlay = null;
     this.darkLayers = [];
@@ -241,7 +241,7 @@ export default class PhaseAtmosphereManager {
 
   setPhase(phase, options = {}) {
     phase = Phaser.Math.Clamp(phase || 1, 1, 4);
-    if (phase === this.phase && !options.force) return;
+    if (phase === this.phase && !options.force && this.playerGlowActive) return;
 
     this.phase = phase;
     this.pendingPhaseThreeRain = false;

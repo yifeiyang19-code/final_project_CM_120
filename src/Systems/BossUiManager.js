@@ -402,7 +402,34 @@ export default class BossUiManager {
         align: "center"
       }).setOrigin(0.5).setDepth(this.uiDepth + 11);
 
-      const widget = { key, box, title, value, sub };
+      const lockShade = this.scene.add.rectangle(0, 0, 92, 66, 0x09020a, 0.72)
+        .setOrigin(0.5)
+        .setDepth(this.uiDepth + 14)
+        .setVisible(false);
+
+      const chainA = this.scene.add.rectangle(0, 0, 112, 5, 0xcfcfcf, 0.92)
+        .setOrigin(0.5)
+        .setDepth(this.uiDepth + 15)
+        .setRotation(-0.58)
+        .setVisible(false);
+
+      const chainB = this.scene.add.rectangle(0, 0, 112, 5, 0xcfcfcf, 0.92)
+        .setOrigin(0.5)
+        .setDepth(this.uiDepth + 15)
+        .setRotation(0.58)
+        .setVisible(false);
+
+      const lockText = this.scene.add.text(0, 0, "LOCKED", {
+        fontFamily: "monospace",
+        fontSize: "12px",
+        fontStyle: "bold",
+        color: "#ffffff",
+        stroke: "#120006",
+        strokeThickness: 4,
+        align: "center"
+      }).setOrigin(0.5).setDepth(this.uiDepth + 16).setVisible(false);
+
+      const widget = { key, box, title, value, sub, lockShade, chainA, chainB, lockText };
       this.cooldownWidgets.push(widget);
       return widget;
     };
@@ -569,6 +596,10 @@ export default class BossUiManager {
       widget.title.setPosition(pos.x, pos.y - 19 / this.getZoom()).setScale(zoomScale);
       widget.value.setPosition(pos.x, pos.y + 5 / this.getZoom()).setScale(zoomScale);
       widget.sub.setPosition(pos.x, pos.y + 24 / this.getZoom()).setScale(zoomScale);
+      widget.lockShade?.setPosition(pos.x, pos.y).setScale(zoomScale);
+      widget.chainA?.setPosition(pos.x, pos.y).setScale(zoomScale);
+      widget.chainB?.setPosition(pos.x, pos.y).setScale(zoomScale);
+      widget.lockText?.setPosition(pos.x, pos.y + 2 / this.getZoom()).setScale(zoomScale);
     });
   }
 
@@ -712,6 +743,10 @@ export default class BossUiManager {
       widget.title.setVisible(!hidden);
       widget.value.setVisible(!hidden);
       widget.sub.setVisible(!hidden);
+      widget.lockShade?.setVisible(false);
+      widget.chainA?.setVisible(false);
+      widget.chainB?.setVisible(false);
+      widget.lockText?.setVisible(false);
     });
     if (hidden) return;
 
@@ -726,11 +761,28 @@ export default class BossUiManager {
       blink: this.getCooldownDisplay(now, blink?.lastBlinkTime, pc?.config?.blinkCooldown)
     };
 
+    const gravityLocked = now < (scene.gravityMovementLockUntil || scene.gravityDebuffUntil || 0);
+
     this.cooldownWidgets.forEach((widget) => {
       const state = cooldownState[widget.key] || { ready: true, text: "READY" };
+      if (gravityLocked) {
+        widget.value.setText("LOCK");
+        widget.value.setColor("#ffb8d0");
+        widget.box.setAlpha(0.44);
+        widget.lockShade?.setVisible(true);
+        widget.chainA?.setVisible(true);
+        widget.chainB?.setVisible(true);
+        widget.lockText?.setVisible(true);
+        return;
+      }
+
       widget.value.setText(state.text);
       widget.value.setColor(state.ready ? "#baffba" : "#ffd39a");
       widget.box.setAlpha(state.ready ? 0.78 : 0.48);
+      widget.lockShade?.setVisible(false);
+      widget.chainA?.setVisible(false);
+      widget.chainB?.setVisible(false);
+      widget.lockText?.setVisible(false);
     });
   }
 

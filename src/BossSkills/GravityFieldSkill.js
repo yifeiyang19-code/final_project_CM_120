@@ -25,10 +25,10 @@ export default class GravityFieldSkill {
         : 3300;
 
     const activeDuration = scene.bossPhase >= 3
-      ? 7800
+      ? 10200
       : scene.bossPhase >= 2
-        ? 8500
-        : 7000;
+        ? 10800
+        : 8200;
 
     scene.gravityFieldCenter = { x: fieldX, y: fieldY };
 
@@ -41,7 +41,7 @@ export default class GravityFieldSkill {
       scene.gravityFieldRadius,
       0x7a33ff,
       0.1
-    ).setDepth(10);
+    ).setName("gravity_warning_field").setDepth(10);
 
     const expandingDarkCircle = scene.add.circle(
       fieldX,
@@ -49,13 +49,13 @@ export default class GravityFieldSkill {
       8,
       0x080010,
       0.46
-    ).setDepth(10.5);
+    ).setName("gravity_warning_core").setDepth(10.5);
 
     const ring = scene.add.circle(
       fieldX,
       fieldY,
       scene.gravityFieldRadius
-    ).setDepth(11);
+    ).setName("gravity_warning_ring").setDepth(11);
 
     ring.setStrokeStyle(10, 0xaa77ff, 0.72);
 
@@ -141,7 +141,7 @@ export default class GravityFieldSkill {
       720,
       0x331166,
       0.13
-    ).setScrollFactor(0).setDepth(8);
+    ).setName("gravity_overlay").setScrollFactor(0).setDepth(8);
 
     scene.gravityVisual = scene.add.circle(
       fieldX,
@@ -149,13 +149,13 @@ export default class GravityFieldSkill {
       scene.gravityFieldRadius,
       0x331166,
       0.22
-    ).setDepth(9);
+    ).setName("gravity_visual").setDepth(9);
 
     scene.gravityRing = scene.add.circle(
       fieldX,
       fieldY,
       scene.gravityFieldRadius
-    ).setDepth(10);
+    ).setName("gravity_ring").setDepth(10);
 
     scene.gravityRing.setStrokeStyle(12, 0xaa77ff, 0.95);
 
@@ -270,7 +270,8 @@ export default class GravityFieldSkill {
       Phaser.Math.Linear(player.body.velocity.y, vy, 0.045)
     );
 
-    scene.gravityDebuffUntil = scene.time.now + 1800;
+    scene.gravityDebuffUntil = scene.time.now + 4200;
+    scene.gravityMovementLockUntil = scene.gravityDebuffUntil;
   }
 
   update() {
@@ -291,14 +292,27 @@ export default class GravityFieldSkill {
       );
 
       if (d <= scene.gravityFieldRadius) {
-        scene.gravityDebuffUntil = now + 1800;
+        scene.gravityDebuffUntil = now + 4200;
+        scene.gravityMovementLockUntil = scene.gravityDebuffUntil;
       }
     }
 
     if (now < scene.gravityDebuffUntil) {
+      scene.gravityMovementLockUntil = Math.max(scene.gravityMovementLockUntil || 0, scene.gravityDebuffUntil || 0);
       scene.physics.world.gravity.y = scene.bossPhase >= 3 ? 1900 : 1750;
     } else if (!scene.gravityFieldActive) {
       scene.physics.world.gravity.y = scene.defaultGravityY;
+    }
+  }
+
+  cleanupGravityObjectsByName() {
+    const scene = this.scene;
+    const children = scene?.children?.list || [];
+    for (const obj of [...children]) {
+      const name = obj?.name || "";
+      if (!name.startsWith("gravity_")) continue;
+      scene.tweens?.killTweensOf?.(obj);
+      if (obj.active) obj.destroy();
     }
   }
 
@@ -315,45 +329,29 @@ export default class GravityFieldSkill {
     if (scene.gravityFieldActive) {
       scene.audioCues?.play?.("gravityFieldCollapse", { volume: 0.42, cooldownMs: 900 });
     }
-    scene.audioCues?.stopLoop?.("gravityFieldLoop", 350);
+    scene.audioCues?.stopLoop?.("gravityFieldLoop", 180);
     scene.gravityFieldActive = false;
+    scene.gravityFieldCenter = null;
+    scene.gravityFieldEndTime = 0;
 
     if (this.vortexEvent) {
       this.vortexEvent.remove(false);
       this.vortexEvent = null;
     }
 
-    if (scene.gravityVisual && scene.gravityVisual.active) {
-      scene.gravityVisual.destroy();
-      scene.gravityVisual = null;
+    const visuals = [scene.gravityVisual, scene.gravityRing, scene.gravityOverlay];
+    for (const visual of visuals) {
+      if (!visual) continue;
+      scene.tweens?.killTweensOf?.(visual);
+      if (visual.active) visual.destroy();
     }
 
-    if (scene.gravityRing && scene.gravityRing.active) {
-      scene.gravityRing.destroy();
-      scene.gravityRing = null;
-    }
+    scene.gravityVisual = null;
+    scene.gravityRing = null;
+    scene.gravityOverlay = null;
+    this.cleanupGravityObjectsByName();
 
-    if (scene.gravityOverlay && scene.gravityOverlay.active) {
-      if (scene.tweens && scene.sys?.isActive?.()) {
-        scene.tweens.add({
-          targets: scene.gravityOverlay,
-          alpha: 0,
-          duration: 500,
-          onComplete: () => {
-            if (scene.gravityOverlay && scene.gravityOverlay.active) {
-              scene.gravityOverlay.destroy();
-            }
-
-            scene.gravityOverlay = null;
-          }
-        });
-      } else {
-        scene.gravityOverlay.destroy();
-        scene.gravityOverlay = null;
-      }
-    }
-
-    if (scene.physics?.world?.gravity) {
+    if (scene.physics?.world?.gravity && scene.time.now >= (scene.gravityDebuffUntil || 0)) {
       scene.physics.world.gravity.y = scene.defaultGravityY ?? 1500;
     }
   }

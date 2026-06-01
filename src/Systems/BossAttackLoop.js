@@ -106,7 +106,7 @@ export default class BossAttackLoop {
   createBehaviorTree() {
     return new SelectorNode([
       new SequenceNode([
-        new ConditionNode((ctx) => ctx.phase >= 4 && ctx.activeTurrets === 0 && ctx.timeSinceTurrets > 5200 && this.isReady("massEnergyTurrets", ctx)),
+        new ConditionNode((ctx) => false && ctx.phase >= 4 && ctx.activeTurrets === 0 && ctx.timeSinceTurrets > 5200 && this.isReady("massEnergyTurrets", ctx)),
         new ActionNode(() => this.action("massEnergyTurrets", 136, "ultimate turret lockdown"))
       ]),
       new SequenceNode([
@@ -174,11 +174,11 @@ export default class BossAttackLoop {
         new ActionNode(() => this.action("purgeProtocol", 82, "reset battlefield pathing"))
       ]),
       new SequenceNode([
-        new ConditionNode((ctx) => ctx.phase >= 4 && ctx.timeSinceTurrets > 8200 && ctx.activeTurrets === 0 && this.isReady("massEnergyTurrets", ctx)),
+        new ConditionNode((ctx) => false && ctx.phase >= 4 && ctx.timeSinceTurrets > 8200 && ctx.activeTurrets === 0 && this.isReady("massEnergyTurrets", ctx)),
         new ActionNode(() => this.action("massEnergyTurrets", 118, "ultimate turret lockdown"))
       ]),
       new SequenceNode([
-        new ConditionNode((ctx) => ctx.phase >= 2 && ctx.timeSinceTurrets > 12500 && (ctx.playerControlsCenter || ctx.activeTurrets === 0) && this.isReady("massEnergyTurrets", ctx)),
+        new ConditionNode((ctx) => ctx.phase >= 2 && ctx.phase < 4 && ctx.timeSinceTurrets > 12500 && (ctx.playerControlsCenter || ctx.activeTurrets === 0) && this.isReady("massEnergyTurrets", ctx)),
         new ActionNode(() => this.action("massEnergyTurrets", 92, "contest center control"))
       ])
     ]);
@@ -209,7 +209,7 @@ export default class BossAttackLoop {
       this.action("destructionBlast", 48, "lane denial"),
       this.action("annihilationSlash", 46, "close slash threat"),
       this.action("purgeProtocol", 44, "aerial lockdown"),
-      this.action("massEnergyTurrets", phase >= 2 ? 62 : 38, "area control"),
+      ...(phase >= 4 ? [] : [this.action("massEnergyTurrets", phase >= 2 ? 62 : 38, "area control")]),
       this.action("gravityField", 36, "center containment"),
       this.action("rayOfOblivion", phase >= 3 ? 50 : 34, "tracking line-of-sight pressure")
     ];
@@ -232,11 +232,11 @@ export default class BossAttackLoop {
 
     if (phase >= 4) {
       actions.push(
-        this.action("massEnergyTurrets", 54, "ultimate turret lockdown"),
-        this.action("holyClearance", 36, "ultimate suppression"),
-        this.action("purgeProtocol", 78, "ultimate aerial lockdown"),
-        this.action("rayOfOblivion", 80, "ultimate beam lock"),
-        this.action("annihilationSlash", 76, "ultimate blade protocol")
+        this.action("holyClearance", 22, "limited ultimate suppression"),
+        this.action("purgeProtocol", 92, "continuous aerial lockdown"),
+        this.action("rayOfOblivion", 96, "ultimate sweep laser"),
+        this.action("menacingAdvance", 90, "collision pressure"),
+        this.action("annihilationSlash", 64, "ultimate blade protocol")
       );
     }
 
@@ -311,17 +311,18 @@ export default class BossAttackLoop {
     }
 
     if (ctx.holyDebtHigh && action.key === "holyClearance") score += 4;
-    if (ctx.activeTurrets === 0 && action.key === "massEnergyTurrets") score += ctx.phase >= 4 ? 18 : ctx.phase >= 2 ? 20 : 10;
-    if (action.key === "menacingAdvance") score += ctx.phase >= 4 ? 34 : ctx.phase >= 3 ? 24 : ctx.phase >= 2 ? 14 : 0;
+    if (ctx.activeTurrets === 0 && action.key === "massEnergyTurrets") score += ctx.phase >= 4 ? -999 : ctx.phase >= 2 ? 20 : 10;
+    if (action.key === "menacingAdvance") score += ctx.phase >= 4 ? 30 : ctx.phase >= 3 ? 24 : ctx.phase >= 2 ? 17 : 8;
     if (ctx.activeTurrets > 0 && action.key === "massEnergyTurrets") score -= 38;
 
     if (ctx.phase >= 4) {
-      if (["purgeProtocol", "rayOfOblivion", "annihilationSlash", "phaseThreePressureCombo"].includes(action.key)) score += 20;
+      if (["purgeProtocol", "rayOfOblivion", "annihilationSlash", "phaseThreePressureCombo"].includes(action.key)) score += 14;
       if (action.key === "holyClearance") score -= 18;
-      if (action.key === "massEnergyTurrets") score += 4;
+      if (action.key === "massEnergyTurrets") score -= 999;
       score += Math.random() * 12;
     } else if (ctx.phase >= 3) score += Math.random() * 7;
-    else score += Math.random() * 5;
+    else if (ctx.phase >= 2) score += Math.random() * 6;
+    else score += Math.random() * 4;
 
     const cooldownAge = ctx.now - (this.skillCooldowns.get(action.key) || -99999);
     score += Math.min(16, cooldownAge / 900);
@@ -475,10 +476,10 @@ export default class BossAttackLoop {
       menacingAdvance: 6400
     }[key] || 8500;
 
-    if (phase >= 4) return base * 0.9;
-    if (phase >= 3) return base * 1.35;
-    if (phase >= 2) return base * 1.15;
-    return base * 1.45;
+    if (phase >= 4) return base * 0.88;
+    if (phase >= 3) return base * 0.96;
+    if (phase >= 2) return base * 1.10;
+    return base * 1.25;
   }
 
   getNextDecisionDelay(action, context) {
@@ -492,13 +493,13 @@ export default class BossAttackLoop {
       groundSuppression: 4200,
       phaseTwoPressureCombo: 6200,
       phaseThreePressureCombo: 6200,
-      rayOfOblivion: 4800,
+      rayOfOblivion: context.phase >= 4 ? 8800 : 4800,
       holyClearance: 6200,
       menacingAdvance: 3000
     }[action.key] || 4800;
 
-    const phasePressure = context.phase >= 4 ? 1.02 : context.phase >= 3 ? 1.22 : context.phase >= 2 ? 0.98 : 1.55;
-    return Math.max(context.phase >= 4 ? 2850 : 3600, base * m * phasePressure);
+    const phasePressure = context.phase >= 4 ? 0.88 : context.phase >= 3 ? 0.94 : context.phase >= 2 ? 1.02 : 1.16;
+    return Math.max(context.phase >= 4 ? 3000 : context.phase >= 3 ? 3300 : 3600, base * m * phasePressure);
   }
 
   castAction(action) {

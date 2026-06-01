@@ -9,6 +9,7 @@ const TRAINING_SKILLS = [
   { key: "holyClearance", label: "Holy Clearance", phase: 2, interval: 7600, note: "small-hitbox dodge drill" },
   { key: "menacingAdvance", label: "Menacing Advance", phase: 2, interval: 7600, note: "charge reaction" },
   { key: "rayOfOblivion", label: "Ray of Oblivion", phase: 3, interval: 8200, note: "beam line-of-sight" },
+  { key: "phase4Sweep", label: "Phase 4 Full Sweep Ray", phase: 4, interval: 22000, note: "top/bottom/left/right/360 sweep drill" },
   { key: "purgeProtocol", label: "Purge Protocol", phase: 3, interval: 13200, note: "drone barrage movement" }
 ];
 
@@ -23,7 +24,7 @@ export default class TrainingScene extends BossScene {
     this.trainingSkillKey = data.trainingSkill || null;
     const selected = this.getTrainingSkillDefinition(this.trainingSkillKey);
     const requestedPhase = Number.isFinite(data.devStartPhase) ? data.devStartPhase : selected?.phase || 1;
-    this.devStartPhase = Phaser.Math.Clamp(requestedPhase || 1, 1, 3);
+    this.devStartPhase = Phaser.Math.Clamp(requestedPhase || 1, 1, 4);
     this.skipBossIntro = true;
   }
 
@@ -263,7 +264,7 @@ export default class TrainingScene extends BossScene {
   }
 
   selectFirstTrainingSkillForPhase(phase) {
-    const safePhase = Phaser.Math.Clamp(phase || 1, 1, 3);
+    const safePhase = Phaser.Math.Clamp(phase || 1, 1, 4);
     const firstSkillForPhase = TRAINING_SKILLS.find((skill) => skill.phase === safePhase) || TRAINING_SKILLS[0];
     if (firstSkillForPhase) {
       this.selectTrainingSkill(firstSkillForPhase.key);
@@ -392,6 +393,12 @@ export default class TrainingScene extends BossScene {
       return;
     }
 
+    if (skill.key === "phase4Sweep") {
+      this.bossPhase = 4;
+      this.skills?.rayOfOblivion?.cast?.({ forceStandard: false });
+      return;
+    }
+
     this.castSkill(skill.key);
   }
 
@@ -402,6 +409,7 @@ export default class TrainingScene extends BossScene {
       skill ? `Current drill: ${skill.label}` : "Current drill: none selected",
       skill ? `Focus: ${skill.note}` : "Choose a skill from the selector.",
       `Casts: ${this.trainingCastCount || 0} · Hits taken: ${this.trainingHitCount || 0}`,
+      "Gravity locks dash/blink/jump but still allows white tree.",
       "ESC pause · H hint · R reset drill · M main menu / refresh"
     ].join("\n"));
   }

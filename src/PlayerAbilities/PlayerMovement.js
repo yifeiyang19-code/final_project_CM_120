@@ -74,7 +74,8 @@ export default class PlayerMovement {
       this.tryAutoStep(time);
     }
 
-    const jumpPressed = Boolean(scene.inputState?.jumpPressed);
+    const gravityMovementLocked = time < (scene.gravityMovementLockUntil || scene.gravityDebuffUntil || 0);
+    const jumpPressed = Boolean(scene.inputState?.jumpPressed) && !gravityMovementLocked;
 
     if (jumpPressed && this.stateMachine?.isActionLocked?.()) {
       this.stateMachine.bufferAction("jump", {}, 140);
@@ -130,7 +131,8 @@ export default class PlayerMovement {
       return false;
     }
 
-    const jumpPressed = Boolean(scene.inputState?.jumpPressed);
+    const gravityMovementLocked = time < (scene.gravityMovementLockUntil || scene.gravityDebuffUntil || 0);
+    const jumpPressed = Boolean(scene.inputState?.jumpPressed) && !gravityMovementLocked;
 
     if (jumpPressed && this.isClimbing) {
       this.stopClimbing(true);
@@ -155,23 +157,26 @@ export default class PlayerMovement {
     scene.playerIsClimbing = true;
     scene.jumpCount = 0;
 
+    const gravitySlowed = time < (scene.gravityDebuffUntil || 0);
+    const ladderSlowMultiplier = gravitySlowed ? 0.34 : 1;
+
     player.body.allowGravity = false;
     player.setVelocity(0, 0);
 
     if (scene.keyA?.isDown) {
-      player.setVelocityX(-this.config.runSpeed * 0.72);
+      player.setVelocityX(-this.config.runSpeed * 0.72 * ladderSlowMultiplier);
       player.setFlipX(true);
       this.updateHitbox();
     } else if (scene.keyD?.isDown) {
-      player.setVelocityX(this.config.runSpeed * 0.72);
+      player.setVelocityX(this.config.runSpeed * 0.72 * ladderSlowMultiplier);
       player.setFlipX(false);
       this.updateHitbox();
     }
 
     if (upHeld && !downHeld) {
-      player.setVelocityY(-this.climbSpeed);
+      player.setVelocityY(-this.climbSpeed * ladderSlowMultiplier);
     } else if (downHeld && !upHeld) {
-      player.setVelocityY(this.climbSpeed);
+      player.setVelocityY(this.climbSpeed * ladderSlowMultiplier);
     } else {
       player.setVelocityY(0);
     }

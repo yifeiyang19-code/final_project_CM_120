@@ -74,6 +74,7 @@ export default class DirectionalDash {
     const now = scene.time.now;
 
     if (!player || !player.active || !player.body) return false;
+    if (now < (scene.gravityMovementLockUntil || scene.gravityDebuffUntil || 0)) return false;
     if (this.isDashing) return false;
 
     const cooldown = this.getCooldown(cooldownGroup);

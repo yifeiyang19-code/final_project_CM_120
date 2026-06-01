@@ -9,21 +9,25 @@ export default class BossPhaseAttacker {
     this.decayRate = config.decayRate ?? 0.95;
     this.phase2DecayRate = config.phase2DecayRate ?? 1.55;
     this.phase3DecayRate = config.phase3DecayRate ?? 1.60;
-    this.phase4DecayRate = config.phase4DecayRate ?? 1.85;
+    this.phase4DecayRate = config.phase4DecayRate ?? 0;
 
     this.phase2Threshold = config.phase2Threshold ?? 0.7;
     this.phase3Threshold = config.phase3Threshold ?? 0.35;
     this.phase4Threshold = config.phase4Threshold ?? config.ultimateThreshold ?? 0.10;
 
-    this.attackSpeedMultiplier = config.attackSpeedMultiplier ?? 1.65;
-    this.phase2AttackSpeedMultiplier = config.phase2AttackSpeedMultiplier ?? 1.15;
-    this.phase3AttackSpeedMultiplier = config.phase3AttackSpeedMultiplier ?? 1.25;
-    this.phase4AttackSpeedMultiplier = config.phase4AttackSpeedMultiplier ?? 1.0;
+    this.attackSpeedMultiplier = config.attackSpeedMultiplier ?? 1.30;
+    this.phase2AttackSpeedMultiplier = config.phase2AttackSpeedMultiplier ?? 1.12;
+    this.phase3AttackSpeedMultiplier = config.phase3AttackSpeedMultiplier ?? 0.96;
+    this.phase4AttackSpeedMultiplier = config.phase4AttackSpeedMultiplier ?? 0.82;
 
     this.transitioning = false;
     this.ultimateStarted = false;
     this.ultimateProtocolLineEvent = null;
     this.ultimateProtocolLineIndex = 0;
+    this.ultimateCountdownEvent = null;
+    this.ultimateCountdownText = null;
+    this.ultimateCountdownStartedAt = 0;
+    this.ultimateCountdownDuration = 17000;
   }
 
   syncToScene() {
@@ -184,7 +188,8 @@ export default class BossPhaseAttacker {
     scene.bgm?.setPhase?.(4);
     scene.atmosphere?.setPhase?.(4, { force: true });
     scene.attackLoop?.cancel?.();
-    scene.attackLoop?.skillCooldowns?.set?.("massEnergyTurrets", (scene.time?.now || 0) - 99999);
+    scene.massEnergyTurretsSkill?.cleanupTurrets?.(true);
+    scene.attackLoop?.skillCooldowns?.set?.("massEnergyTurrets", (scene.time?.now || 0) + 999999);
     scene.__ultimateFinaleStarted = false;
 
     this.playTransition(
@@ -198,18 +203,8 @@ export default class BossPhaseAttacker {
       if (!scene.gameOver && scene.bossPhase === 4 && !scene.__ultimateFinaleStarted) {
         this.startUltimateVisualPulse();
         this.startUltimateProtocolLines();
-      }
-    });
-
-    scene.time.delayedCall(24500, () => {
-      if (!scene.gameOver && scene.bossPhase === 4 && !scene.__ultimateFinaleStarted) {
-        this.startUltimateBerserkFinale();
-      }
-    });
-
-    scene.time.delayedCall(31500, () => {
-      if (!scene.gameOver && scene.bossPhase === 4 && !scene.__ultimateFinaleStarted) {
-        this.startUltimateBerserkFinale();
+        this.startUltimateCountdown(17);
+        scene.purgeProtocolSkill?.startPhase4EndlessBarrage?.();
       }
     });
   }
@@ -226,6 +221,8 @@ export default class BossPhaseAttacker {
 
     scene.__ultimateFinaleStarted = true;
     this.stopUltimateProtocolLines();
+    this.stopUltimateCountdown();
+    scene.purgeProtocolSkill?.stopPhase4EndlessBarrage?.();
     scene.attackLoop?.cancel?.();
     scene.stopAllBossActions?.({
       stopCameraFollow: false,
@@ -247,6 +244,85 @@ export default class BossPhaseAttacker {
       scene.bossIntegrity = 0;
       scene.endBossFight();
     });
+  }
+
+
+  startUltimateCountdown(seconds = 17) {
+    const scene = this.scene;
+    if (this.ultimateCountdownEvent || scene.gameOver) return;
+
+    this.ultimateCountdownDuration = Math.max(8, seconds) * 1000;
+    this.ultimateCountdownStartedAt = scene.time?.now || 0;
+
+    const screenPos = this.getCountdownScreenPosition();
+    this.ultimateCountdownText = scene.add.text(screenPos.x, screenPos.y, String(Math.ceil(this.ultimateCountdownDuration / 1000)), {
+      fontFamily: "monospace",
+      fontSize: "44px",
+      fontStyle: "bold",
+      color: "#ffffff",
+      stroke: "#000000",
+      strokeThickness: 10
+    })
+      .setOrigin(0.5)
+      .setScrollFactor(0)
+      .setDepth(9999);
+
+    this.ultimateCountdownEvent = scene.time.addEvent({
+      delay: 250,
+      loop: true,
+      callback: () => this.updateUltimateCountdown()
+    });
+    this.updateUltimateCountdown();
+  }
+
+  updateUltimateCountdown() {
+    const scene = this.scene;
+    if (scene.gameOver || scene.bossPhase < 4 || scene.__ultimateFinaleStarted) {
+      this.stopUltimateCountdown();
+      return;
+    }
+
+    const elapsed = (scene.time?.now || 0) - this.ultimateCountdownStartedAt;
+    const remainMs = Math.max(0, this.ultimateCountdownDuration - elapsed);
+    const remain = Math.ceil(remainMs / 1000);
+
+    if (this.ultimateCountdownText?.active) {
+      const pos = this.getCountdownScreenPosition();
+      this.ultimateCountdownText
+        .setText(String(remain))
+        .setPosition(pos.x, pos.y)
+        .setColor(remain <= 10 ? "#ff3344" : "#ffffff")
+        .setScale(remain <= 10 ? 1.18 : 1.0);
+    }
+
+    if (remainMs <= 0) {
+      this.startUltimateBerserkFinale();
+    }
+  }
+
+
+  getCountdownScreenPosition() {
+    const scene = this.scene;
+    const cam = scene.cameras?.main;
+    const width = scene.scale?.width || cam?.width || 1280;
+    if (!scene.boss?.active || !cam) {
+      return { x: width * 0.5, y: 120 };
+    }
+    return {
+      x: Phaser.Math.Clamp(scene.boss.x - cam.scrollX, 80, width - 80),
+      y: Phaser.Math.Clamp(scene.boss.y - cam.scrollY - 104, 70, 190)
+    };
+  }
+
+  stopUltimateCountdown() {
+    if (this.ultimateCountdownEvent) {
+      this.ultimateCountdownEvent.remove(false);
+      this.ultimateCountdownEvent = null;
+    }
+    if (this.ultimateCountdownText?.active) {
+      this.ultimateCountdownText.destroy();
+    }
+    this.ultimateCountdownText = null;
   }
 
 

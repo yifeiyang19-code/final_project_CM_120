@@ -206,12 +206,16 @@ export default class PlayerController {
       return;
     }
 
-    if (scene.inputState?.blinkPressed) {
+    const gravityMovementLocked = time < (scene.gravityMovementLockUntil || scene.gravityDebuffUntil || 0);
+
+    if (scene.inputState?.blinkPressed && !gravityMovementLocked) {
       this.blinkAbility.tryBlink();
       return;
     }
 
-    this.directionalDash.update();
+    if (!gravityMovementLocked) {
+      this.directionalDash.update();
+    }
 
     if (this.directionalDash?.isDashing) {
       return;

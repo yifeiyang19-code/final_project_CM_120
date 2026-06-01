@@ -360,6 +360,7 @@ export default class BossScene extends Phaser.Scene {
     this.gravityFieldRadius = 520;
     this.gravityFieldEndTime = 0;
     this.gravityDebuffUntil = 0;
+    this.gravityMovementLockUntil = 0;
     this.gravityVisual = null;
     this.gravityRing = null;
     this.gravityOverlay = null;
@@ -419,17 +420,17 @@ export default class BossScene extends Phaser.Scene {
       maxIntegrity: gameConfig.boss?.maxIntegrity || BOSS_STATS.MAX_INTEGRITY,
       integrity: gameConfig.boss?.maxIntegrity || BOSS_STATS.MAX_INTEGRITY,
       phase: 1,
-      decayRate: gameConfig.boss?.phase1DecayRate ?? 0.82,
+      decayRate: gameConfig.boss?.phase1DecayRate ?? 0.86,
       phase2DecayRate: gameConfig.boss?.phase2DecayRate ?? 1.55,
       phase3DecayRate: gameConfig.boss?.phase3DecayRate ?? 1.38,
-      phase4DecayRate: gameConfig.boss?.phase4DecayRate ?? 1.85,
+      phase4DecayRate: gameConfig.boss?.phase4DecayRate ?? 0,
       phase2Threshold: gameConfig.boss?.phase2Threshold || BOSS_STATS.PHASE2_THRESHOLD,
       phase3Threshold: gameConfig.boss?.phase3Threshold || BOSS_STATS.PHASE3_THRESHOLD,
       phase4Threshold: gameConfig.boss?.phase4Threshold ?? 0.12,
-      attackSpeedMultiplier: 1.65,
-      phase2AttackSpeedMultiplier: 1.05,
-      phase3AttackSpeedMultiplier: 1.25,
-      phase4AttackSpeedMultiplier: 0.58
+      attackSpeedMultiplier: 1.30,
+      phase2AttackSpeedMultiplier: 1.12,
+      phase3AttackSpeedMultiplier: 0.96,
+      phase4AttackSpeedMultiplier: 0.82
     });
 
     this.phaseManager.syncToScene();
@@ -465,7 +466,7 @@ export default class BossScene extends Phaser.Scene {
       this.attackSpeedMultiplier = this.phaseManager?.phase3AttackSpeedMultiplier ?? 1.25;
     } else if (this.bossPhase === 4) {
       this.bossIntegrity = this.bossMaxIntegrity * 0.10;
-      this.bossDecayRate = this.phaseManager?.phase4DecayRate ?? 1.85;
+      this.bossDecayRate = this.phaseManager?.phase4DecayRate ?? 0;
       this.attackSpeedMultiplier = this.phaseManager?.phase4AttackSpeedMultiplier ?? 1.0;
     }
 
@@ -1393,6 +1394,7 @@ export default class BossScene extends Phaser.Scene {
     this.gravityFieldCenter = null;
     this.gravityFieldEndTime = 0;
     this.gravityDebuffUntil = 0;
+    this.gravityMovementLockUntil = 0;
     if (this.physics?.world?.gravity) {
       this.physics.world.gravity.y = this.defaultGravityY;
     }
@@ -1404,9 +1406,19 @@ export default class BossScene extends Phaser.Scene {
     ];
 
     for (const visual of visuals) {
-      if (visual && visual.active) {
+      if (!visual) continue;
+      this.tweens?.killTweensOf?.(visual);
+      if (visual.active) {
         visual.destroy();
       }
+    }
+
+    const children = this.children?.list || [];
+    for (const obj of [...children]) {
+      const name = obj?.name || "";
+      if (!name.startsWith("gravity_")) continue;
+      this.tweens?.killTweensOf?.(obj);
+      if (obj.active) obj.destroy();
     }
 
     this.gravityVisual = null;

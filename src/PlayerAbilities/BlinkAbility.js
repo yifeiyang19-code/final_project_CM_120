@@ -20,6 +20,7 @@ export default class BlinkAbility {
     const now = scene.time.now;
 
     if (!player || !player.active || !player.body) return false;
+    if (now < (scene.gravityMovementLockUntil || scene.gravityDebuffUntil || 0)) return false;
 
     if (now - this.lastBlinkTime < this.config.blinkCooldown) {
       return false;

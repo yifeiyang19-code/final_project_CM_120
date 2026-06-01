@@ -12,6 +12,8 @@ export default class PurgeProtocolSkill {
     this.headWarningFollowEvent = null;
     this.airRaidBanner = null;
     this.airRaidBannerText = null;
+    this.phase4BarrageEvent = null;
+    this.phase4BarrageIndex = 0;
   }
 
   cast() {
@@ -127,7 +129,7 @@ export default class PurgeProtocolSkill {
         bigBlastScale: 2.22,
         lightweightMarkers: false,
         extendedBarrage: true,
-        predictiveLead: 0.72
+        predictiveLead: 0.58
       };
     }
 
@@ -167,6 +169,59 @@ export default class PurgeProtocolSkill {
       blastScale: 2.12,
       bigBlastScale: 2.0,
       predictiveLead: 0.46
+    };
+  }
+
+
+  startPhase4EndlessBarrage() {
+    const scene = this.scene;
+    if (this.phase4BarrageEvent || scene.gameOver) return;
+
+    this.phase4BarrageIndex = 0;
+    this.showHeadWarning("Final protocol aerial bombardment locked on player.", 2200);
+
+    this.phase4BarrageEvent = scene.time.addEvent({
+      delay: 1500,
+      loop: true,
+      callback: () => {
+        if (scene.gameOver || scene.bossPhase < 4 || scene.__ultimateFinaleStarted || !scene.player?.active) {
+          this.stopPhase4EndlessBarrage();
+          return;
+        }
+        const config = this.getPhase4PursuitConfig();
+        const target = this.getPredictedStrikeTarget(config, this.phase4BarrageIndex);
+        this.createStrikeMarker(target.x, target.y, config, this.phase4BarrageIndex);
+        this.phase4BarrageIndex += 1;
+      }
+    });
+  }
+
+  stopPhase4EndlessBarrage() {
+    if (this.phase4BarrageEvent) {
+      this.phase4BarrageEvent.remove(false);
+      this.phase4BarrageEvent = null;
+    }
+  }
+
+  getPhase4PursuitConfig() {
+    return {
+      strikeCount: 1,
+      strikeInterval: 1500,
+      warningDuration: 980,
+      bombFallTime: 560,
+      spreadX: 80,
+      markerRadius: 64,
+      explosionRadius: 104,
+      damage: 1,
+      tileWidth: 210,
+      tileHeight: 165,
+      droneScale: 2.05,
+      bombScale: 1.92,
+      blastScale: 2.28,
+      bigBlastScale: 2.12,
+      lightweightMarkers: false,
+      extendedBarrage: true,
+      predictiveLead: 0.58
     };
   }
 
@@ -658,6 +713,7 @@ export default class PurgeProtocolSkill {
 
   cleanup() {
     this.clearHeadWarning();
+    this.stopPhase4EndlessBarrage();
 
     const allObjects = [
       ...this.activeDrones,

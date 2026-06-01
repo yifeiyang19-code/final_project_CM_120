@@ -24,11 +24,11 @@ export const DEFAULT_GAME_CONFIG = Object.freeze({
     maxIntegrity: 100,
     phase2Threshold: 0.7,
     phase3Threshold: 0.35,
-    phase1DecayRate: 0.95,
+    phase1DecayRate: 0.86,
     phase2DecayRate: 1.35,
-    phase3DecayRate: 1.60,
+    phase3DecayRate: 1.75,
     phase4Threshold: 0.10,
-    phase4DecayRate: 1.85
+    phase4DecayRate: 0
   },
   input: {
     bufferMs: 140
