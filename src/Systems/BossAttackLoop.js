@@ -106,6 +106,14 @@ export default class BossAttackLoop {
   createBehaviorTree() {
     return new SelectorNode([
       new SequenceNode([
+        new ConditionNode((ctx) => ctx.phase === 1 && ctx.elapsedCombatMs > 6500 && ctx.timeSinceDestruction > 12000 && this.isReady("destructionBlast", ctx)),
+        new ActionNode(() => this.action("destructionBlast", 116, "phase one blast tutorial"))
+      ]),
+      new SequenceNode([
+        new ConditionNode((ctx) => ctx.phase === 1 && ctx.elapsedCombatMs > 15500 && ctx.timeSinceAnnihilation > 14000 && this.isReady("annihilationSlash", ctx)),
+        new ActionNode(() => this.action("annihilationSlash", 112, "phase one execution tutorial"))
+      ]),
+      new SequenceNode([
         new ConditionNode((ctx) => false && ctx.phase >= 4 && ctx.activeTurrets === 0 && ctx.timeSinceTurrets > 5200 && this.isReady("massEnergyTurrets", ctx)),
         new ActionNode(() => this.action("massEnergyTurrets", 136, "ultimate turret lockdown"))
       ]),
@@ -217,7 +225,6 @@ export default class BossAttackLoop {
     if (phase >= 2) {
       actions.push(
         this.action("holyClearance", 28, "projectile suppression"),
-        this.action("groundSuppression", 40, "ground sweep"),
         this.action("phaseTwoPressureCombo", 44, "combo pressure")
       );
     }
@@ -253,7 +260,7 @@ export default class BossAttackLoop {
     }
 
     if (ctx.playerGrounded) {
-      if (["annihilationSlash", "menacingAdvance", "groundSuppression"].includes(action.key)) score += 18;
+      if (["annihilationSlash", "menacingAdvance"].includes(action.key)) score += 18;
       if (action.key === "purgeProtocol" && ctx.playerPredictableGroundRun) score += 22;
       if (ctx.phase >= 2 && action.key === "holyClearance" && ctx.speedX > 180) score += 4;
     }
@@ -404,6 +411,9 @@ export default class BossAttackLoop {
       playerFallingIntoLane,
       safeToUseLongCast: activeTurrets < 3 && !scene.gravityFieldActive,
       holyDebtHigh: this.holyPressureDebt >= 42,
+      elapsedCombatMs: now - (scene.combatStartTime || now),
+      timeSinceDestruction: now - (this.skillCooldowns.get("destructionBlast") || -99999),
+      timeSinceAnnihilation: now - (this.skillCooldowns.get("annihilationSlash") || -99999),
       timeSincePurge: now - (this.skillCooldowns.get("purgeProtocol") || -99999),
       timeSinceTurrets: now - (this.skillCooldowns.get("massEnergyTurrets") || -99999),
       timeSinceHoly: now - (this.skillCooldowns.get("holyClearance") || -99999)
@@ -465,21 +475,20 @@ export default class BossAttackLoop {
     const base = {
       destructionBlast: 7000,
       annihilationSlash: 7400,
-      massEnergyTurrets: phase >= 4 ? 13500 : phase >= 2 ? 12800 : 15000,
-      gravityField: 14200,
-      purgeProtocol: 11800,
-      groundSuppression: 9400,
+      massEnergyTurrets: phase >= 4 ? 13500 : phase >= 3 ? 9800 : phase >= 2 ? 10500 : 12000,
+      gravityField: 11800,
+      purgeProtocol: 9800,
       phaseTwoPressureCombo: 14500,
       phaseThreePressureCombo: 13500,
-      rayOfOblivion: phase >= 1 ? 9800 : 10500,
-      holyClearance: 17800,
-      menacingAdvance: 6400
+      rayOfOblivion: phase >= 3 ? 7600 : phase >= 2 ? 8600 : 9200,
+      holyClearance: 13800,
+      menacingAdvance: 5200
     }[key] || 8500;
 
     if (phase >= 4) return base * 0.88;
-    if (phase >= 3) return base * 0.96;
-    if (phase >= 2) return base * 1.10;
-    return base * 1.25;
+    if (phase >= 3) return base * 0.78;
+    if (phase >= 2) return base * 0.90;
+    return base * 1.0;
   }
 
   getNextDecisionDelay(action, context) {
@@ -490,7 +499,6 @@ export default class BossAttackLoop {
       massEnergyTurrets: context.phase >= 4 ? 7600 : context.phase >= 2 ? 7600 : 7600,
       gravityField: 7400,
       purgeProtocol: 7600,
-      groundSuppression: 4200,
       phaseTwoPressureCombo: 6200,
       phaseThreePressureCombo: 6200,
       rayOfOblivion: context.phase >= 4 ? 8800 : 4800,
@@ -498,8 +506,8 @@ export default class BossAttackLoop {
       menacingAdvance: 3000
     }[action.key] || 4800;
 
-    const phasePressure = context.phase >= 4 ? 0.88 : context.phase >= 3 ? 0.94 : context.phase >= 2 ? 1.02 : 1.16;
-    return Math.max(context.phase >= 4 ? 3000 : context.phase >= 3 ? 3300 : 3600, base * m * phasePressure);
+    const phasePressure = context.phase >= 4 ? 0.88 : context.phase >= 3 ? 0.78 : context.phase >= 2 ? 0.86 : 0.98;
+    return Math.max(context.phase >= 4 ? 3000 : context.phase >= 3 ? 2500 : context.phase >= 2 ? 2800 : 3000, base * m * phasePressure);
   }
 
   castAction(action) {
@@ -509,7 +517,6 @@ export default class BossAttackLoop {
     this.skillCooldowns.set(key, this.lastSkillAt);
 
     const execute = () => {
-      if (key === "groundSuppression") return this.scene.castGroundSuppression();
       if (key === "phaseTwoPressureCombo") return this.scene.castPhaseTwoPressureCombo();
       if (key === "phaseThreePressureCombo") return this.scene.castPhaseThreePressureCombo();
       return this.scene.castSkill(key);

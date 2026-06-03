@@ -7,17 +7,25 @@ export default class BossPhaseAttacker {
     this.phase = config.phase ?? 1;
 
     this.decayRate = config.decayRate ?? 0.95;
-    this.phase2DecayRate = config.phase2DecayRate ?? 1.55;
-    this.phase3DecayRate = config.phase3DecayRate ?? 1.60;
+    this.phase2DecayRate = config.phase2DecayRate ?? 0.875;
+    this.phase3DecayRate = config.phase3DecayRate ?? 0.333;
     this.phase4DecayRate = config.phase4DecayRate ?? 0;
 
     this.phase2Threshold = config.phase2Threshold ?? 0.7;
     this.phase3Threshold = config.phase3Threshold ?? 0.35;
     this.phase4Threshold = config.phase4Threshold ?? config.ultimateThreshold ?? 0.10;
 
+    this.phaseTimelineSeconds = {
+      phase2: config.phaseTimelineSeconds?.phase2 ?? 43,
+      phase3: config.phaseTimelineSeconds?.phase3 ?? 83,
+      phase4: config.phaseTimelineSeconds?.phase4 ?? 133
+    };
+    this.phase4CountdownSeconds = config.phase4CountdownSeconds ?? 38;
+    this.phaseTimingGraceSeconds = config.phaseTimingGraceSeconds ?? 6;
+
     this.attackSpeedMultiplier = config.attackSpeedMultiplier ?? 1.30;
-    this.phase2AttackSpeedMultiplier = config.phase2AttackSpeedMultiplier ?? 1.12;
-    this.phase3AttackSpeedMultiplier = config.phase3AttackSpeedMultiplier ?? 0.96;
+    this.phase2AttackSpeedMultiplier = config.phase2AttackSpeedMultiplier ?? 1.03;
+    this.phase3AttackSpeedMultiplier = config.phase3AttackSpeedMultiplier ?? 0.90;
     this.phase4AttackSpeedMultiplier = config.phase4AttackSpeedMultiplier ?? 0.82;
 
     this.transitioning = false;
@@ -27,7 +35,7 @@ export default class BossPhaseAttacker {
     this.ultimateCountdownEvent = null;
     this.ultimateCountdownText = null;
     this.ultimateCountdownStartedAt = 0;
-    this.ultimateCountdownDuration = 17000;
+    this.ultimateCountdownDuration = this.phase4CountdownSeconds * 1000;
   }
 
   syncToScene() {
@@ -43,50 +51,106 @@ export default class BossPhaseAttacker {
   update(delta) {
     const scene = this.scene;
 
-    if (
-      scene.gameOver ||
-      scene.bossIntegrity <= 0 ||
-      scene.isPhaseTransitioning ||
-      this.transitioning
-    ) {
+    if (scene.gameOver || scene.bossIntegrity <= 0) {
+      return;
+    }
+
+    this.ensureTimelineStarted();
+    this.checkPhaseChange();
+
+    if (scene.isPhaseTransitioning || this.transitioning) {
       return;
     }
 
     const decayPerSecond = scene.bossDecayRate ?? this.decayRate;
     const amount = decayPerSecond * (delta / 1000);
 
-    this.damage(amount);
-  }
-
-  damage(amount) {
-    const scene = this.scene;
-
-    if (
-      scene.gameOver ||
-      scene.bossIntegrity <= 0 ||
-      scene.isPhaseTransitioning ||
-      this.transitioning
-    ) {
-      return;
+    if (amount > 0) {
+      this.applyDisplayDecay(amount);
     }
 
-    scene.bossIntegrity = Phaser.Math.Clamp(
-      scene.bossIntegrity - amount,
-      0,
-      scene.bossMaxIntegrity
-    );
+    this.checkPhaseChange();
+  }
 
+  ensureTimelineStarted() {
+    const scene = this.scene;
+    const now = scene.time?.now || 0;
+    if (!Number.isFinite(scene.__bossCombatStartedAt) || scene.__bossCombatStartedAt <= 0) {
+      scene.__bossCombatStartedAt = now;
+    }
+    if (!Number.isFinite(scene.__phaseTimelineStartedAt) || scene.__phaseTimelineStartedAt <= 0) {
+      scene.__phaseTimelineStartedAt = scene.__bossCombatStartedAt;
+    }
+  }
+
+  applyDisplayDecay(amount) {
+    const scene = this.scene;
     if (scene.bossPhase >= 4) {
       scene.bossIntegrity = Math.max(scene.bossIntegrity, scene.bossMaxIntegrity * 0.04);
       return;
     }
 
-    if (scene.bossIntegrity <= 0) {
-      this.enterUltimateBerserk();
+    scene.bossIntegrity = Phaser.Math.Clamp(
+      scene.bossIntegrity - amount,
+      1,
+      scene.bossMaxIntegrity
+    );
+  }
+
+  damage(amount) {
+    const scene = this.scene;
+
+    if (scene.gameOver || scene.bossIntegrity <= 0) {
       return;
     }
 
+    this.ensureTimelineStarted();
+    this.applyDisplayDecay(Math.max(0, amount || 0));
     this.checkPhaseChange();
+  }
+
+  getCombatElapsedSeconds() {
+    this.ensureTimelineStarted();
+    const scene = this.scene;
+    const now = scene.time?.now || 0;
+    const startedAt = scene.__bossCombatStartedAt || scene.__phaseTimelineStartedAt || now;
+    return Math.max(0, (now - startedAt) / 1000);
+  }
+
+  getPhaseMarkerSeconds(phase) {
+    if (phase === 2) return this.phaseTimelineSeconds.phase2;
+    if (phase === 3) return this.phaseTimelineSeconds.phase3;
+    if (phase === 4) return this.phaseTimelineSeconds.phase4;
+    return 0;
+  }
+
+  getCurrentPhaseFloorRatio() {
+    const elapsed = this.getCombatElapsedSeconds();
+    const buffer = 0.012;
+    if (this.phase === 1 && elapsed < this.phaseTimelineSeconds.phase2 - this.phaseTimingGraceSeconds) return this.phase2Threshold + buffer;
+    if (this.phase === 2 && elapsed < this.phaseTimelineSeconds.phase3 - this.phaseTimingGraceSeconds) return this.phase3Threshold + buffer;
+    if (this.phase === 3 && elapsed < this.phaseTimelineSeconds.phase4 - this.phaseTimingGraceSeconds) return this.phase4Threshold + buffer;
+    return 0;
+  }
+
+  enforcePhaseTimingFloor() {
+    const scene = this.scene;
+    const floorRatio = this.getCurrentPhaseFloorRatio();
+    if (floorRatio <= 0 || scene.bossPhase >= 4) return;
+    const floorIntegrity = scene.bossMaxIntegrity * floorRatio;
+    if (scene.bossIntegrity < floorIntegrity) {
+      scene.bossIntegrity = floorIntegrity;
+    }
+  }
+
+  canAdvanceToPhase(phase) {
+    return this.getCombatElapsedSeconds() >= this.getPhaseMarkerSeconds(phase);
+  }
+
+  canAdvanceByHealth(phase, ratio, threshold) {
+    const marker = this.getPhaseMarkerSeconds(phase);
+    const elapsed = this.getCombatElapsedSeconds();
+    return ratio <= threshold && elapsed >= marker - this.phaseTimingGraceSeconds;
   }
 
   checkPhaseChange() {
@@ -94,26 +158,23 @@ export default class BossPhaseAttacker {
 
     if (
       scene.gameOver ||
-      scene.bossIntegrity <= 0 ||
       scene.isPhaseTransitioning ||
       this.transitioning
     ) {
       return;
     }
 
-    const ratio = scene.bossIntegrity / scene.bossMaxIntegrity;
-
-    if (scene.bossPhase === 1 && ratio <= this.phase2Threshold) {
+    if (scene.bossPhase === 1 && this.canAdvanceToPhase(2)) {
       this.enterPhaseTwo();
       return;
     }
 
-    if (scene.bossPhase === 2 && ratio <= this.phase3Threshold) {
+    if (scene.bossPhase === 2 && this.canAdvanceToPhase(3)) {
       this.enterPhaseThree();
       return;
     }
 
-    if (scene.bossPhase === 3 && ratio <= this.phase4Threshold) {
+    if (scene.bossPhase === 3 && this.canAdvanceToPhase(4)) {
       this.enterUltimateBerserk();
     }
   }
@@ -187,10 +248,12 @@ export default class BossPhaseAttacker {
 
     scene.bgm?.setPhase?.(4);
     scene.atmosphere?.setPhase?.(4, { force: true });
+    this.moveBossToPhaseFourCenter();
     scene.attackLoop?.cancel?.();
     scene.massEnergyTurretsSkill?.cleanupTurrets?.(true);
     scene.attackLoop?.skillCooldowns?.set?.("massEnergyTurrets", (scene.time?.now || 0) + 999999);
     scene.__ultimateFinaleStarted = false;
+    if (scene.rayOfOblivionSkill) scene.rayOfOblivionSkill.__phase4OpeningRadialStarted = false;
 
     this.playTransition(
       "ULTIMATE BERSERK",
@@ -199,13 +262,60 @@ export default class BossPhaseAttacker {
       []
     );
 
-    scene.time.delayedCall(5200, () => {
+    scene.time.delayedCall(1760, () => {
       if (!scene.gameOver && scene.bossPhase === 4 && !scene.__ultimateFinaleStarted) {
         this.startUltimateVisualPulse();
         this.startUltimateProtocolLines();
-        this.startUltimateCountdown(17);
+        this.startUltimateCountdown(this.phase4CountdownSeconds);
+        scene.rayOfOblivionSkill?.startPhase4OpeningRadialSweep?.();
+        scene.rayOfOblivionSkill?.startPhase4ScriptedLaserWalls?.();
+        this.startPhase4BrotherPressure();
         scene.purgeProtocolSkill?.startPhase4EndlessBarrage?.();
       }
+    });
+  }
+
+  moveBossToPhaseFourCenter() {
+    const scene = this.scene;
+    if (!scene.boss?.active || !scene.cameras?.main) return;
+    const view = scene.cameras.main.worldView;
+    const targetX = view.centerX;
+    const targetY = Phaser.Math.Clamp(view.centerY - 80, view.top + 150, view.bottom - 180);
+    scene.boss.setVelocity(0, 0);
+    scene.boss.body.allowGravity = false;
+    scene.tweens.killTweensOf(scene.boss);
+    scene.tweens.add({
+      targets: scene.boss,
+      x: targetX,
+      y: targetY,
+      duration: 420,
+      ease: "Cubic.easeOut"
+    });
+  }
+
+  startPhase4BrotherPressure() {
+    const scene = this.scene;
+    if (scene.__phase4BrotherPressureEvent) scene.__phase4BrotherPressureEvent.remove(false);
+
+    const fire = () => {
+      if (scene.gameOver || scene.bossPhase !== 4 || scene.__ultimateFinaleStarted) {
+        scene.__phase4BrotherPressureEvent?.remove(false);
+        scene.__phase4BrotherPressureEvent = null;
+        return;
+      }
+      scene.destructionBlastSkill?.castSingle?.(true, 0);
+      scene.time.delayedCall(520, () => {
+        if (!scene.gameOver && scene.bossPhase === 4 && !scene.__ultimateFinaleStarted) {
+          scene.annihilationSlashSkill?.castSingle?.(0xffffff, 0.88, 0);
+        }
+      });
+    };
+
+    scene.time.delayedCall(1100, fire);
+    scene.__phase4BrotherPressureEvent = scene.time.addEvent({
+      delay: 4300,
+      loop: true,
+      callback: fire
     });
   }
 
@@ -222,6 +332,10 @@ export default class BossPhaseAttacker {
     scene.__ultimateFinaleStarted = true;
     this.stopUltimateProtocolLines();
     this.stopUltimateCountdown();
+    if (scene.__phase4BrotherPressureEvent) {
+      scene.__phase4BrotherPressureEvent.remove(false);
+      scene.__phase4BrotherPressureEvent = null;
+    }
     scene.purgeProtocolSkill?.stopPhase4EndlessBarrage?.();
     scene.attackLoop?.cancel?.();
     scene.stopAllBossActions?.({
@@ -426,6 +540,34 @@ export default class BossPhaseAttacker {
     scene.atmosphere?.phaseFlash?.(0xffffff, 0.08);
   }
 
+
+
+  cleanupActiveSkillBeforeTransition() {
+    const scene = this.scene;
+    try {
+      scene.cancelPendingBattleTimers?.();
+      scene.menacingAdvanceSkill?.cleanupChargeObjects?.();
+      scene.purgeProtocolSkill?.cleanup?.();
+      scene.rayOfOblivionSkill?.cleanup?.({ endCast: false });
+      scene.bossMovement?.cleanupRayVisuals?.({ endCast: false });
+      scene.cleanupRayHostileObjects?.();
+      scene.cleanupHostileObjects?.();
+      scene.safeDeactivateGravityField?.();
+      scene.massEnergyTurretsSkill?.cleanupTurrets?.(true);
+      scene.thunderstorm?.stop?.();
+      if (scene.__phase4BrotherPressureEvent) {
+        scene.__phase4BrotherPressureEvent.remove(false);
+        scene.__phase4BrotherPressureEvent = null;
+      }
+      scene.purgeProtocolSkill?.stopPhase4EndlessBarrage?.();
+      if (scene.__ultimateVisualPulseEvent) {
+        scene.__ultimateVisualPulseEvent.remove(false);
+        scene.__ultimateVisualPulseEvent = null;
+      }
+    } catch (_error) {
+    }
+  }
+
   getPhaseTransitionColor(phase, fallback) {
     const accessibility = this.scene.registry.get("gameConfig")?.accessibility || {};
     if (!accessibility.colorBlindMode) return fallback;
@@ -450,201 +592,161 @@ export default class BossPhaseAttacker {
 
     if (scene.gameOver || this.transitioning) return;
 
-    scene.rayOfOblivionSkill?.cleanup?.({ endCast: false });
-    scene.bossMovement?.cleanupRayVisuals?.({ endCast: false });
-    scene.cleanupRayHostileObjects?.();
-
-    scene.audioCues?.play?.("bossPhaseTransition", { volume: 0.56, cooldownMs: 1000 });
-    scene.audioCues?.play?.("phaseTitle", { volume: 0.42, cooldownMs: 1000 });
     this.transitioning = true;
     scene.isPhaseTransitioning = true;
     scene.__phaseTransitionStartedAt = scene.time?.now || 0;
     scene.controlsLocked = true;
-    scene.setBossCasting?.(true);
+    scene.setBossCasting?.(true) ?? (scene.isBossCasting = true);
+    if (scene.player?.body) scene.player.setVelocity(0, 0);
+    scene.playerController?.directionalDash?.cancel?.();
+    scene.playerController?.blinkAbility?.cancel?.();
 
-    if (scene.attackLoop) {
-      scene.attackLoop.cancel();
-    } else {
-      scene.attackLoopToken++;
-    }
+    scene.attackLoop?.cancel?.();
+    if (!scene.attackLoop) scene.attackLoopToken++;
 
-    if (scene.stopAllBossActions) {
-      scene.stopAllBossActions({
-        stopCameraFollow: true,
-        freezeBoss: true,
-        clearHostiles: true,
-        clearTurrets: true,
-        keepGravityField: false
-      });
-    }
+    this.cleanupActiveSkillBeforeTransition();
 
-    scene.rayOfOblivionSkill?.cleanup?.({ endCast: false });
-    scene.bossMovement?.cleanupRayVisuals?.({ endCast: false });
-    scene.cleanupRayHostileObjects?.();
-
-    if (scene.player) {
-      scene.player.setVelocity(0, 0);
-    }
-
-    if (scene.boss) {
+    if (scene.boss?.active) {
       scene.tweens.killTweensOf(scene.boss);
       scene.boss.setVelocity(0, 0);
       scene.boss.body.allowGravity = false;
+      if (scene.anims.exists("blue_idle_anim")) scene.boss.play("blue_idle_anim", true);
+      const cam = scene.cameras?.main;
+      if (cam) {
+        scene.__phaseTransitionCameraZoom = scene.combatZoom || scene.phaseZoom || cam.zoom || 0.78;
+        cam.stopFollow();
+        cam.pan(scene.boss.x, scene.boss.y - 70, 360, "Sine.easeInOut", true);
+        cam.setZoom(scene.__phaseTransitionCameraZoom);
+      }
     }
 
-    const anchor = scene.getPhaseBossAnchor
-      ? scene.getPhaseBossAnchor(scene.bossPhase || this.phase)
-      : { x: scene.boss?.x || scene.player.x, y: scene.boss?.y || scene.player.y };
+    scene.audioCues?.play?.("bossPhaseTransition", { volume: 0.54, cooldownMs: 900 });
+    scene.audioCues?.play?.("phaseTitle", { volume: 0.42, cooldownMs: 900 });
 
-    scene.moveBossToPhaseAnchor?.(scene.bossPhase || this.phase, 760);
+    const cam = scene.cameras?.main;
+    const width = scene.scale?.width || cam?.width || 1280;
+    const height = scene.scale?.height || cam?.height || 720;
+    const centerX = width * 0.5;
+    const centerY = height * 0.43;
 
-    scene.cameras.main.stopFollow();
+    const overlay = scene.add.rectangle(centerX, centerY, width, height, color, 0.0)
+      .setScrollFactor(0)
+      .setDepth(9100)
+      .setBlendMode(Phaser.BlendModes.ADD);
 
-    const focusX = anchor.x;
-    const focusY = anchor.y - 120;
+    const panel = scene.add.rectangle(centerX, centerY, Math.min(1180, width - 40), 248, 0x04070c, 0.88)
+      .setScrollFactor(0)
+      .setDepth(9103)
+      .setStrokeStyle(4, color, 0.96);
 
-    
-    
-    scene.cameras.main.pan(focusX, focusY, 760, "Sine.easeInOut");
+    const titleText = scene.add.text(centerX, centerY - 38, title, {
+      fontFamily: "monospace",
+      fontSize: "96px",
+      fontStyle: "bold",
+      color: "#ffffff",
+      stroke: "#000000",
+      strokeThickness: 14,
+      align: "center"
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(9104);
 
-    scene.time.delayedCall(800, () => {
-      if (!scene.gameOver && scene.isPhaseTransitioning) {
-        scene.cameras.main.pan(focusX, focusY, 260, "Sine.easeOut");
-      }
-    });
+    const subText = scene.add.text(centerX, centerY + 38, subtitle, {
+      fontFamily: "monospace",
+      fontSize: "48px",
+      fontStyle: "bold",
+      color: this.hexToCss(color),
+      stroke: "#000000",
+      strokeThickness: 9,
+      align: "center"
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(9104);
 
-    scene.tweens.add({
-      targets: scene.cameras.main,
-      zoom: scene.phaseZoom,
-      duration: 500,
-      ease: "Sine.easeOut"
-    });
+    const objects = [overlay, panel, titleText, subText];
+    panel.setScale(0.86, 1);
+    titleText.setAlpha(0);
+    subText.setAlpha(0);
 
-    if (scene.phaseText) {
-      scene.phaseText.setText(title);
-      scene.phaseText.setColor("#ffffff");
-      scene.phaseText.setStroke("#000000", 12);
-      scene.phaseText.setAlpha(0);
+    if (cam) {
+      cam.flash(90, 255, 255, 255);
+      cam.shake(180, 0.0055);
     }
 
-    if (scene.phaseSubText) {
-      scene.phaseSubText.setText(subtitle);
-      scene.phaseSubText.setColor(this.hexToCss(color));
-      scene.phaseSubText.setStroke("#000000", 8);
-      scene.phaseSubText.setAlpha(0);
-    }
-
-    scene.time.delayedCall(350, () => {
-      this.createPhaseShockwave(color);
-
-      if (scene.phaseText && scene.phaseSubText) {
-        scene.tweens.add({
-          targets: [scene.phaseText, scene.phaseSubText],
-          alpha: 1,
-          duration: 350,
-          ease: "Sine.easeOut"
-        });
-      }
-
-      if (scene.cameras && scene.cameras.main) {
-        scene.cameras.main.flash(450, 255, 255, 255);
-        scene.cameras.main.shake(650, 0.025);
-      }
-
-      if (scene.boss) {
-        scene.tweens.add({
-          targets: scene.boss,
-          scaleX: 2.65,
-          scaleY: 2.65,
-          duration: 180,
-          yoyo: true,
-          ease: "Sine.easeOut"
-        });
-
-        scene.tweens.addCounter({
-          from: 0,
-          to: 100,
-          duration: 650,
-          onUpdate: (tween) => {
-            const t = tween.getValue() / 100;
-            const base = Phaser.Display.Color.ValueToColor(0xffffff);
-            const target = Phaser.Display.Color.ValueToColor(color);
-
-            const r = Phaser.Math.Interpolation.Linear([base.red, target.red], t);
-            const g = Phaser.Math.Interpolation.Linear([base.green, target.green], t);
-            const b = Phaser.Math.Interpolation.Linear([base.blue, target.blue], t);
-
-            scene.boss.setTint(Phaser.Display.Color.GetColor(r, g, b));
-          },
-          onComplete: () => {
-            if (scene.boss && scene.boss.active) {
-              scene.boss.clearTint();
-            }
-          }
-        });
-      }
-    });
-
-    scene.time.delayedCall(3200, () => {
-      if (scene.phaseText && scene.phaseSubText) {
-        scene.tweens.add({
-          targets: [scene.phaseText, scene.phaseSubText],
-          alpha: 0,
-          duration: 450,
-          ease: "Sine.easeIn"
-        });
-      }
-
-      scene.tweens.add({
-        targets: scene.cameras.main,
-        zoom: scene.combatZoom,
-        duration: 700,
-        ease: "Sine.easeInOut"
+    const pulseAt = (delay, index) => {
+      scene.time.delayedCall(delay, () => {
+        if (scene.gameOver || !scene.boss?.active) return;
+        scene.boss.setVelocity(0, 0);
+        scene.boss.body.allowGravity = false;
+        scene.boss.setTint?.(color);
+        const ring = scene.add.circle(scene.boss.x, scene.boss.y, 38, color, 0.12)
+          .setDepth(880)
+          .setStrokeStyle(7, color, 0.98)
+          .setBlendMode(Phaser.BlendModes.ADD);
+        const core = scene.add.circle(scene.boss.x, scene.boss.y, 18, 0xffffff, 0.22)
+          .setDepth(881)
+          .setBlendMode(Phaser.BlendModes.ADD);
+        const scanX = scene.add.rectangle(scene.boss.x, scene.boss.y, 18, 520 + index * 90, color, 0.34)
+          .setDepth(879)
+          .setBlendMode(Phaser.BlendModes.ADD);
+        const scanY = scene.add.rectangle(scene.boss.x, scene.boss.y, 620 + index * 120, 14, color, 0.26)
+          .setDepth(879)
+          .setBlendMode(Phaser.BlendModes.ADD);
+        objects.push(ring, core, scanX, scanY);
+        scene.tweens.add({ targets: ring, radius: 440 + index * 135, alpha: 0, duration: 620, ease: "Cubic.easeOut", onComplete: () => ring.destroy() });
+        scene.tweens.add({ targets: core, radius: 118 + index * 34, alpha: 0, duration: 420, ease: "Quad.easeOut", onComplete: () => core.destroy() });
+        scene.tweens.add({ targets: [scanX, scanY], scaleX: 1.35, scaleY: 1.35, alpha: 0, duration: 520, ease: "Sine.easeOut", onComplete: () => { scanX.destroy(); scanY.destroy(); } });
+        scene.tweens.add({ targets: scene.boss, scaleX: 2.42, scaleY: 2.42, duration: 130, yoyo: true, ease: "Sine.easeInOut" });
+        scene.cameras.main.shake(120, 0.0028 + index * 0.001);
+        scene.audioCues?.play?.("bossPhaseTransition", { volume: 0.22, cooldownMs: 120 });
       });
+    };
 
-      scene.cameras.main.pan(
-        scene.player.x,
-        scene.player.y - 180,
-        700,
-        "Sine.easeInOut"
-      );
+    pulseAt(120, 0);
+    pulseAt(560, 1);
+    pulseAt(1000, 2);
 
-      scene.time.delayedCall(760, () => {
-        scene.cameras.main.startFollow(scene.player, true, 0.08, 0.08);
-        scene.cameras.main.setFollowOffset(0, scene.cameraFollowOffsetY);
+    scene.tweens.add({ targets: overlay, alpha: 0.18, duration: 120, yoyo: true, repeat: 2, ease: "Sine.easeOut" });
+    scene.tweens.add({ targets: panel, scaleX: 1, duration: 180, ease: "Back.easeOut" });
+    scene.tweens.add({ targets: [titleText, subText], alpha: 1, duration: 160, ease: "Sine.easeOut" });
 
-        const finalScriptedPhase = false;
-        scene.controlsLocked = false;
-        scene.setBossCasting?.(false);
-        scene.isPhaseTransitioning = false;
-        scene.__phaseTransitionStartedAt = 0;
-        this.transitioning = false;
+    scene.time.delayedCall(1420, () => {
+      scene.tweens.add({ targets: [panel, titleText, subText], alpha: 0, duration: 220, ease: "Sine.easeIn" });
+      scene.tweens.add({ targets: overlay, alpha: 0, duration: 180, ease: "Sine.easeIn" });
+    });
 
-        if (scene.boss && scene.boss.active) {
-          scene.boss.body.allowGravity = false;
+    scene.time.delayedCall(1680, () => {
+      objects.forEach((obj) => obj?.destroy?.());
 
-          if (scene.anims.exists("blue_idle_anim")) {
-            scene.boss.play("blue_idle_anim", true);
-          }
-        }
+      scene.controlsLocked = false;
+      scene.setBossCasting?.(false) ?? (scene.isBossCasting = false);
+      scene.isPhaseTransitioning = false;
+      scene.__phaseTransitionStartedAt = 0;
+      this.transitioning = false;
 
-        scene.atmosphere?.onPhaseTransitionComplete?.();
-        if (scene.bossPhase >= 4) {
-          scene.thunderstorm?.startFinalStorm?.();
-        }
-        this.playTransitionDialogue(dialogueLines);
-        if (scene.healthPacks && !scene.healthPacks.nextSpawnEvent) {
-          scene.healthPacks.scheduleNext?.(2200);
-        }
+      if (scene.boss?.active) {
+        scene.boss.body.allowGravity = false;
+        scene.boss.setVelocity(0, 0);
+        scene.boss.clearTint?.();
+        if (scene.anims.exists("blue_idle_anim")) scene.boss.play("blue_idle_anim", true);
+      }
 
-        if (!scene.gameOver && scene.attackLoop) {
-          scene.time.delayedCall(scene.bossPhase >= 4 ? 350 : 900, () => {
-            if (!scene.gameOver && !scene.isPhaseTransitioning) {
-              scene.attackLoop.start();
-            }
-          });
-        }
-      });
+      const cam = scene.cameras.main;
+      cam.resetFX?.();
+      cam.stopFollow();
+      cam.setZoom(scene.combatZoom || scene.phaseZoom || scene.__phaseTransitionCameraZoom || 0.78);
+      cam.startFollow(scene.player, true, 0.08, 0.08);
+      cam.setFollowOffset(0, scene.cameraFollowOffsetY);
+      scene.__phaseTransitionCameraZoom = null;
+      scene.atmosphere?.onPhaseTransitionComplete?.();
+      if (scene.bossPhase >= 4) scene.thunderstorm?.startFinalStorm?.();
+      this.playTransitionDialogue(dialogueLines);
+
+      if (scene.healthPacks && !scene.healthPacks.nextSpawnEvent) {
+        scene.healthPacks.scheduleNext?.(1700);
+      }
+
+      if (!scene.gameOver && scene.attackLoop) {
+        scene.time.delayedCall(scene.bossPhase >= 4 ? 180 : 260, () => {
+          if (!scene.gameOver && !scene.isPhaseTransitioning) scene.attackLoop.start();
+        });
+      }
     });
   }
 

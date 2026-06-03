@@ -66,10 +66,10 @@ export default class MassEnergyTurretsSkill {
     const duration = scene.bossPhase >= 4
       ? 8600
       : scene.bossPhase >= 3
-        ? 8200
+        ? 9200
         : scene.bossPhase >= 2
-          ? 7600
-          : 7000;
+          ? 8600
+          : 7800;
 
     const positions = [];
 
@@ -91,10 +91,10 @@ export default class MassEnergyTurretsSkill {
       turret.canPierceTiles = false;
       turret.isOvercharged = false;
       turret.fireDelay = scene.bossPhase >= 3
-        ? 1120
+        ? 980
         : scene.bossPhase >= 2
-          ? 1280
-          : 1360;
+          ? 1120
+          : 1240;
 
       turret.setTint(0x99ccff);
 
@@ -163,10 +163,10 @@ export default class MassEnergyTurretsSkill {
     }
 
     turret.fireDelay = scene.bossPhase >= 3
-      ? 1420
+      ? 1260
       : scene.bossPhase >= 2
-        ? 1560
-        : 1660;
+        ? 1380
+        : 1500;
 
     turret.fireEvent = scene.time.addEvent({
       delay: turret.fireDelay,
@@ -284,7 +284,7 @@ export default class MassEnergyTurretsSkill {
 
     turret.rotation = angle;
 
-    const speed = turret.canPierceTiles ? 620 : 560;
+    const speed = turret.canPierceTiles ? 680 : 610;
 
     scene.audioCues?.play?.("turretShot", { volume: turret.canPierceTiles ? 0.24 : 0.20, cooldownMs: 220 });
 
@@ -295,7 +295,7 @@ export default class MassEnergyTurretsSkill {
     );
     scene.trackHostileObject?.(bullet);
 
-    bullet.setScale(turret.canPierceTiles ? 3.7 : 3.1);
+    bullet.setScale(turret.canPierceTiles ? 4.05 : 3.35);
     bullet.setDepth(25);
     bullet.body.allowGravity = false;
     bullet.rotation = angle;

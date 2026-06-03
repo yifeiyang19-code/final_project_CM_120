@@ -64,7 +64,7 @@ export default class BossBgmManager {
       this.scene.audioCues.stopLoop(oldCue, immediate ? 0 : 450);
     }
 
-    const phaseVolume = phase >= 3 ? 0.30 : phase >= 2 ? 0.22 : 0.16;
+    const phaseVolume = phase >= 3 ? 0.10 : phase >= 2 ? 0.07 : 0.04;
     this.machineBed = this.scene.audioCues.startLoop(cueName, {
       volume: phaseVolume
     });

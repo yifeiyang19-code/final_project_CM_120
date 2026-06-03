@@ -7,7 +7,7 @@ export const DEFAULT_GAME_CONFIG = Object.freeze({
     maxFixedStepsPerFrame: 4
   },
   player: {
-    maxHp: 6,
+    maxHp: 7,
     iframeMs: 1250,
     contactDamage: 1,
     states: {
@@ -24,11 +24,13 @@ export const DEFAULT_GAME_CONFIG = Object.freeze({
     maxIntegrity: 100,
     phase2Threshold: 0.7,
     phase3Threshold: 0.35,
-    phase1DecayRate: 0.86,
-    phase2DecayRate: 1.35,
-    phase3DecayRate: 1.75,
+    phase1DecayRate: 0.75,
+    phase2DecayRate: 0.875,
+    phase3DecayRate: 0.333,
     phase4Threshold: 0.10,
-    phase4DecayRate: 0
+    phase4DecayRate: 0,
+    phaseTimelineSeconds: { phase2: 43, phase3: 83, phase4: 133 },
+    phase4CountdownSeconds: 18
   },
   input: {
     bufferMs: 140
@@ -44,7 +46,7 @@ export const DEFAULT_GAME_CONFIG = Object.freeze({
   audio: {
     enabled: true,
     masterVolume: 0.35,
-    bgm: { key: "bgm_boss_main", volume: 0.28, loop: true, fadeInMs: 1200 },
+    bgm: { key: "bgm_boss_main", volume: 0.28, loop: false, fadeInMs: 1200 },
     cues: {},
     playerSfxEnabled: true
   },
@@ -62,7 +64,7 @@ export const DEFAULT_GAME_CONFIG = Object.freeze({
       hp_cell: "assets/images/ui/hp_cell.png"
     },
     audio: {
-      bgm_boss_main: "assets/audio/boss_bgm_protocol_for_nothing.mp3"
+      bgm_boss_main: "assets/audio/Iron_Liturgy.mp3"
     },
     json: {
       sprite_metadata: "assets/data/sprite_metadata.json"

@@ -686,6 +686,9 @@ export default class BossMovementController {
 
   holyClearance() {
     const scene = this.scene;
+    if (scene.holyClearanceSkill?.cast) {
+      return scene.holyClearanceSkill.cast();
+    }
 
     if (
       !scene.boss ||
@@ -700,7 +703,7 @@ export default class BossMovementController {
     scene.boss.setVelocity(0, 0);
     scene.boss.setFlipX(scene.player.x < scene.boss.x);
 
-    const volleyCount = scene.bossPhase >= 3 ? 5 : Phaser.Math.Between(2, 3);
+    const volleyCount = scene.bossPhase >= 3 ? 4 : Phaser.Math.Between(2, 3);
     const delayBetween = scene.bossPhase >= 3 ? 280 : 420;
 
     if (scene.anims.exists("boss_attack_anim")) {
@@ -711,7 +714,7 @@ export default class BossMovementController {
       scene.time.delayedCall(i * delayBetween, () => {
         if (!scene.boss || !scene.boss.active || scene.gameOver) return;
 
-        const spreadCount = scene.bossPhase >= 3 ? i + 1 : 1;
+        const spreadCount = scene.bossPhase >= 3 ? Math.min(4, i + 1) : 1;
         this.fireBossBulletVolley(spreadCount);
       });
     }
@@ -743,8 +746,8 @@ export default class BossMovementController {
       scene.player.y - 20
     );
 
-    const bulletKey = Phaser.Utils.Array.GetRandom(scene.bossBulletKeys);
-    const spread = Phaser.Math.DegToRad(10);
+    const bulletKey = scene.bossBulletKeys?.[0] || Phaser.Utils.Array.GetRandom(scene.bossBulletKeys);
+    const spread = Phaser.Math.DegToRad(6);
 
     scene.playBossEnergyEffect(
       scene.bossPhase >= 3 ? 0xff3333 : 0x7df9ff,
@@ -759,17 +762,22 @@ export default class BossMovementController {
       const bullet = scene.physics.add.sprite(startX, startY, bulletKey);
       scene.trackHostileObject?.(bullet);
 
-      bullet.setScale(scene.bossPhase >= 3 ? 1.6 : 1.35);
+      bullet.setScale(0.76);
       bullet.setDepth(50);
       bullet.body.allowGravity = false;
       bullet.rotation = angle;
+      bullet.__holyClearance = true;
+      bullet.__spawnX = startX;
+      bullet.__spawnY = startY;
+      scene.registerProjectileVsTrees?.(bullet, 1, true);
 
-      const speed = scene.bossPhase >= 3 ? 720 : 560;
+      const speed = scene.bossPhase >= 3 ? 300 : 270;
 
       bullet.setVelocity(Math.cos(angle) * speed, Math.sin(angle) * speed);
 
       scene.physics.add.overlap(bullet, scene.player, () => {
-        if (!bullet.active) return;
+        if (!bullet.active || bullet.__treeBlocked) return;
+        if (scene.holyClearanceSkill?.blockBulletWithTrees?.(bullet, true)) return;
 
         bullet.destroy();
         scene.damagePlayer(1);

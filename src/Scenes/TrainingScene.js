@@ -5,11 +5,10 @@ const TRAINING_SKILLS = [
   { key: "annihilationSlash", label: "Annihilation Slash", phase: 1, interval: 7200, note: "arc warning / lateral dodge" },
   { key: "massEnergyTurrets", label: "Mass-Energy Turrets", phase: 2, interval: 9000, note: "screen threat tracking" },
   { key: "gravityField", label: "Gravity Field", phase: 2, interval: 9000, note: "escape pull zone" },
-  { key: "groundSuppression", label: "Ground Suppression", phase: 2, interval: 8800, note: "climb / vertical dash drill" },
   { key: "holyClearance", label: "Holy Clearance", phase: 2, interval: 7600, note: "small-hitbox dodge drill" },
   { key: "menacingAdvance", label: "Menacing Advance", phase: 2, interval: 7600, note: "charge reaction" },
   { key: "rayOfOblivion", label: "Ray of Oblivion", phase: 3, interval: 8200, note: "beam line-of-sight" },
-  { key: "phase4Sweep", label: "Phase 4 Full Sweep Ray", phase: 4, interval: 22000, note: "top/bottom/left/right/360 sweep drill" },
+  { key: "phase4Sweep", label: "Phase 4 Final Sweep Ray", phase: 4, interval: 19000, note: "slow left-to-right, slow top-to-bottom, and slower opening 360 sweep" },
   { key: "purgeProtocol", label: "Purge Protocol", phase: 3, interval: 13200, note: "drone barrage movement" }
 ];
 
@@ -38,7 +37,6 @@ export default class TrainingScene extends BossScene {
     this.input.topOnly = true;
     this.hideCombatHintOverlay?.(0);
     this.createTrainingOverlay();
-    this.input.keyboard?.on?.("keydown-M", () => this.returnToMainMenu());
     this.input.keyboard?.on?.("keydown-T", () => this.showTrainingSelector());
 
     if (this.trainingSkillKey) {
@@ -101,26 +99,36 @@ export default class TrainingScene extends BossScene {
     if (this.__returningToMenu) return;
     this.__returningToMenu = true;
 
-    this.forceResumeSceneClock?.();
-    this.hidePauseMenu?.();
-    this.trainingLoopEvent?.remove(false);
-    this.trainingLoopEvent = null;
-    this.trainingSelector?.setVisible(false);
-    this.controlsLocked = true;
-
     try {
-      this.cameras?.main?.resetFX?.();
+      this.time.timeScale = 1;
       this.physics?.world?.resume?.();
+      this.cameras?.main?.resetFX?.();
+      this.trainingLoopEvent?.remove(false);
+      this.trainingLoopEvent = null;
+      this.trainingSelector?.setVisible(false);
+      this.pauseMenuContainer?.setVisible(false);
+      this.__pauseMenuOpen = false;
+      this.controlsLocked = true;
+      this.input?.keyboard?.resetKeys?.();
       this.bgm?.destroy?.();
       this.audioCues?.stop?.();
     } catch (_error) {
     }
 
-    if (typeof window !== "undefined" && window.location?.reload) {
-      window.location.reload();
-      return;
+    if (typeof window !== "undefined" && window.location) {
+      try {
+        const url = new URL(window.location.href);
+        url.searchParams.set("menu", String(Date.now()));
+        url.hash = "";
+        window.location.replace(url.toString());
+        return;
+      } catch (_error) {
+        window.location.href = window.location.pathname;
+        return;
+      }
     }
 
+    this.scene.stop("TrainingScene");
     this.scene.start("MenuScene", { fromTraining: true });
   }
 
@@ -388,13 +396,11 @@ export default class TrainingScene extends BossScene {
     this.trainingCastCount += 1;
     this.refreshTrainingStatus();
 
-    if (skill.key === "groundSuppression") {
-      this.castGroundSuppression();
-      return;
-    }
 
     if (skill.key === "phase4Sweep") {
       this.bossPhase = 4;
+      if (this.skills?.rayOfOblivion) this.skills.rayOfOblivion.__phase4OpeningRadialStarted = false;
+      this.skills?.rayOfOblivion?.startPhase4OpeningRadialSweep?.();
       this.skills?.rayOfOblivion?.cast?.({ forceStandard: false });
       return;
     }

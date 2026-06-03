@@ -266,7 +266,7 @@ export default class BossUiManager {
       .setDepth(this.uiDepth + 8)
       .setAlpha(0.72);
 
-    this.playerHudLabel = this.scene.add.text(0, 0, "CORE INTEGRITY", {
+    this.playerHudLabel = this.scene.add.text(0, 0, "HEALTH", {
       fontFamily: "monospace",
       fontSize: "13px",
       color: "#d8fbff",
@@ -279,7 +279,7 @@ export default class BossUiManager {
     this.playerHudElements = [this.playerHudPanel, this.playerHudLabel];
     this.hpCells = [];
 
-    for (let i = 0; i < 6; i++) {
+    for (let i = 0; i < 7; i++) {
       const cell = this.scene.add.image(0, 0, "hp_cell")
         .setOrigin(0.5)
         .setDepth(this.uiDepth + 9)
@@ -662,14 +662,14 @@ export default class BossUiManager {
   }
 
   fadeBossIdentity(duration = 700) {
-    this.bossIdentityHidden = true;
+    this.bossIdentityHidden = false;
     const targets = [this.bossNameText, this.bossSubtitleText].filter((obj) => obj && obj.active);
     if (!targets.length) return;
 
     this.scene.tweens.killTweensOf(targets);
     this.scene.tweens.add({
-      targets,
-      alpha: 0,
+      targets: this.bossSubtitleText,
+      alpha: this.hudAlpha.subtitle * 0.74,
       duration,
       ease: "Sine.easeOut"
     });
@@ -695,6 +695,10 @@ export default class BossUiManager {
     });
   }
 
+  toRomanPhase(phase = 1) {
+    return ["I", "II", "III", "IV"][Phaser.Math.Clamp((phase || 1) - 1, 0, 3)] || "I";
+  }
+
   update(bossIntegrity, bossMaxIntegrity, bossPhase) {
     if (!this.bossBarFill) return;
 
@@ -712,7 +716,7 @@ export default class BossUiManager {
     this.bossBarFill.fillColor = colors.fill;
     this.bossBarGlow.fillColor = colors.glow;
 
-    this.bossNameText.setText(this.bossDisplayName);
+    this.bossNameText.setText(`${this.bossDisplayName} // PHASE ${this.toRomanPhase(phase)}`);
     this.bossNameText.setColor(colors.name);
 
     this.bossSubtitleText.setText(
@@ -724,8 +728,7 @@ export default class BossUiManager {
     this.updateAbilityCooldownHud();
 
     if (this.bossIdentityHidden) {
-      this.bossNameText?.setAlpha?.(0);
-      this.bossSubtitleText?.setAlpha?.(0);
+      this.bossIdentityHidden = false;
     }
 
     if (!this.bossHudShown) {

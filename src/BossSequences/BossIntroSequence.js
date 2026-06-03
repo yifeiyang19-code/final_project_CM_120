@@ -321,7 +321,10 @@ export default class BossIntroSequence {
 
         scene.controlsLocked = false;
         scene.combatStartTime = scene.time.now;
+        scene.__bossCombatStartedAt = scene.time.now;
+        scene.__phaseTimelineStartedAt = scene.time.now;
         scene.combatStartRealTime = performance.now();
+        scene.bgm?.start?.();
         scene.showCombatHintOverlay?.(3400);
         scene.fadeBossIdentityAfterDelay?.(4200, 900);
 

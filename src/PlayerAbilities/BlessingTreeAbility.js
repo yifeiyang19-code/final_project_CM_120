@@ -520,6 +520,7 @@ export default class BlessingTreeAbility {
     this.configureTreeBody(tree, direction, scale);
 
     this.activeTrees.push(tree);
+    scene.holyClearanceSkill?.clearBulletsBlockedByTree?.(tree);
 
     scene.playerController?.registerTreeSummon?.();
     scene.bossSpeakRandom?.("playerBlessingTree", 2200, { anchorToSpeaker: true, fontSize: "25px", boxWidth: 820, boxHeight: 106, offsetY: -150 });

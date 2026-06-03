@@ -475,7 +475,8 @@ export default class BossDeathSequence {
 
   failTrial() {
     const scene = this.scene;
-    if (scene.gameOver) return;
+    if (scene.__failureSequenceStarted) return;
+    scene.__failureSequenceStarted = true;
 
     this.resetCinematicState();
     scene.gameOver = true;

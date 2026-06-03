@@ -55,7 +55,6 @@ export default class BossScene extends Phaser.Scene {
     this.applyAccessibilityRuntimeSettings();
     this.createSystems();
     this.createActors();
-    this.bgm?.start?.();
     this.atmosphere?.setPhase?.(this.bossPhase || 1);
     this.keyF1 = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.F1);
     this.keyEsc = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.ESC);
@@ -270,7 +269,10 @@ export default class BossScene extends Phaser.Scene {
     this.ui?.showBossHud?.(250);
     this.controlsLocked = false;
     this.combatStartTime = this.time.now;
+    this.__bossCombatStartedAt = this.time.now;
+    this.__phaseTimelineStartedAt = this.time.now;
     this.combatStartRealTime = performance.now();
+    this.bgm?.start?.();
     this.showCombatHintOverlay(3400);
     this.fadeBossIdentityAfterDelay(4200, 900);
 
@@ -305,6 +307,8 @@ export default class BossScene extends Phaser.Scene {
     this.gameOver = false;
     this.__restartQueued = false;
     this.combatStartTime = 0;
+    this.__bossCombatStartedAt = 0;
+    this.__phaseTimelineStartedAt = 0;
     this.combatStartRealTime = 0;
     this.treeBlocksThisRun = 0;
     this.__playerDamageVignette = null;
@@ -312,7 +316,6 @@ export default class BossScene extends Phaser.Scene {
     this.playerIframeStartedAt = -99999;
     this.__pauseMenuOpen = false;
     this.__wasControlsLockedBeforePause = false;
-    this.__groundSuppressionObjects = [];
     this.__trackedBattleTimers = new Set();
     this.__timePluginPatched = false;
     this.__screenThreatIndicators = [];
@@ -357,7 +360,7 @@ export default class BossScene extends Phaser.Scene {
 
     this.gravityFieldActive = false;
     this.gravityFieldCenter = null;
-    this.gravityFieldRadius = 520;
+    this.gravityFieldRadius = 380;
     this.gravityFieldEndTime = 0;
     this.gravityDebuffUntil = 0;
     this.gravityMovementLockUntil = 0;
@@ -397,8 +400,8 @@ export default class BossScene extends Phaser.Scene {
     this.thunderstorm = new Phase4ThunderstormSystem(this).create();
     this.debugDraw = new DebugDraw(this);
     this.healthPacks = new HealthPackManager(this, {
-      minRespawnMs: 10000,
-      maxRespawnMs: 10000,
+      minRespawnMs: 6800,
+      maxRespawnMs: 7600,
       maxActive: 3
     });
 
@@ -420,16 +423,19 @@ export default class BossScene extends Phaser.Scene {
       maxIntegrity: gameConfig.boss?.maxIntegrity || BOSS_STATS.MAX_INTEGRITY,
       integrity: gameConfig.boss?.maxIntegrity || BOSS_STATS.MAX_INTEGRITY,
       phase: 1,
-      decayRate: gameConfig.boss?.phase1DecayRate ?? 0.86,
-      phase2DecayRate: gameConfig.boss?.phase2DecayRate ?? 1.55,
-      phase3DecayRate: gameConfig.boss?.phase3DecayRate ?? 1.38,
+      decayRate: gameConfig.boss?.phase1DecayRate ?? 0.75,
+      phase2DecayRate: gameConfig.boss?.phase2DecayRate ?? 0.875,
+      phase3DecayRate: gameConfig.boss?.phase3DecayRate ?? 0.333,
       phase4DecayRate: gameConfig.boss?.phase4DecayRate ?? 0,
+      phaseTimelineSeconds: gameConfig.boss?.phaseTimelineSeconds,
+      phase4CountdownSeconds: gameConfig.boss?.phase4CountdownSeconds ?? 15,
+      phaseTimingGraceSeconds: gameConfig.boss?.phaseTimingGraceSeconds ?? 6,
       phase2Threshold: gameConfig.boss?.phase2Threshold || BOSS_STATS.PHASE2_THRESHOLD,
       phase3Threshold: gameConfig.boss?.phase3Threshold || BOSS_STATS.PHASE3_THRESHOLD,
       phase4Threshold: gameConfig.boss?.phase4Threshold ?? 0.12,
-      attackSpeedMultiplier: 1.30,
-      phase2AttackSpeedMultiplier: 1.12,
-      phase3AttackSpeedMultiplier: 0.96,
+      attackSpeedMultiplier: 1.08,
+      phase2AttackSpeedMultiplier: 0.88,
+      phase3AttackSpeedMultiplier: 0.74,
       phase4AttackSpeedMultiplier: 0.82
     });
 
@@ -523,12 +529,12 @@ export default class BossScene extends Phaser.Scene {
   }
 
   requestRestart(reason = "manual") {
+    if (!this.gameOver && !this.__allowRestartInput) return;
+
     const now = this.time?.now ?? performance.now();
     if (now - (this.__lastRestartRequestAt ?? -99999) < 250) return;
     this.__lastRestartRequestAt = now;
 
-    
-    
     this.hardRestartGame(reason);
   }
 
@@ -920,7 +926,7 @@ export default class BossScene extends Phaser.Scene {
       return;
     }
 
-    if (this.keyR && this.keyR.isDown) {
+    if (this.gameOver && this.keyR && this.keyR.isDown) {
       this.requestRestart("poll");
       return;
     }
@@ -1251,6 +1257,9 @@ export default class BossScene extends Phaser.Scene {
     this.isPhaseTransitioning = false;
     this.phaseManager.transitioning = false;
     this.setBossCasting(false);
+    this.cameras.main.resetFX?.();
+    this.cameras.main.stopFollow();
+    this.cameras.main.setZoom(this.combatZoom || this.phaseZoom || 0.78);
     this.cameras.main.startFollow(this.player, true, 0.08, 0.08);
     this.cameras.main.setFollowOffset(0, this.cameraFollowOffsetY);
     this.atmosphere?.setPhase?.(this.bossPhase || 1, { force: true });
@@ -1364,6 +1373,10 @@ export default class BossScene extends Phaser.Scene {
         const name = obj?.name || "";
         const isRayVisual =
           name.startsWith("ray_") ||
+          name.startsWith("phase4_horizontal_sweep") ||
+          name.startsWith("phase4_vertical_sweep") ||
+          name.startsWith("phase4_radial_sweep") ||
+          name.startsWith("phase4_radial_preview") ||
           name === "legacy_ray_visual" ||
           name.startsWith("legacy_ray");
 
@@ -1457,8 +1470,6 @@ export default class BossScene extends Phaser.Scene {
     this.cancelPendingBattleTimers?.();
     this.bossMovement?.cleanup?.();
 
-    this.cleanupGroundSuppression?.();
-
     if (this.menacingAdvanceSkill && this.menacingAdvanceSkill.cleanupChargeObjects) {
       this.menacingAdvanceSkill.cleanupChargeObjects();
     }
@@ -1479,7 +1490,6 @@ export default class BossScene extends Phaser.Scene {
 
     this.cleanupRayHostileObjects?.();
     this.cleanupHostileObjects();
-    this.cleanupGroundSuppression?.();
     this.healthPacks?.cleanup?.();
     this.cleanupPlayerTrees();
     
@@ -1521,8 +1531,6 @@ export default class BossScene extends Phaser.Scene {
       this.cancelPendingBattleTimers?.();
     }
     this.bossMovement?.cleanup?.();
-
-    this.cleanupGroundSuppression?.();
 
     if (this.menacingAdvanceSkill && this.menacingAdvanceSkill.cleanupChargeObjects) {
       this.menacingAdvanceSkill.cleanupChargeObjects();
@@ -2087,96 +2095,6 @@ export default class BossScene extends Phaser.Scene {
     });
   }
 
-  castGroundSuppression() {
-    if (this.gameOver || this.isPhaseTransitioning || !this.player || !this.player.active) return;
-
-    this.cleanupGroundSuppression();
-    this.setBossCasting?.(true);
-    this.bossSpeak("Ground route sealed. Climb.", 2200, {
-      anchorToSpeaker: true,
-      fontSize: "30px",
-      boxWidth: 760,
-      boxHeight: 110,
-      offsetY: -145,
-      depth: 7300
-    });
-
-    const mapWidth = this.map?.widthInPixels || 3840;
-    const dangerTop = this.bossPhase >= 3 ? 760 : 900;
-    const dangerBottom = 1508;
-    const warningTime = this.bossPhase >= 3 ? 1700 : 2200;
-    const pulses = this.bossPhase >= 3 ? 3 : 2;
-    const pulseGap = 620;
-
-    const warning = this.add.rectangle(mapWidth / 2, (dangerTop + dangerBottom) / 2, mapWidth, dangerBottom - dangerTop, 0xff2222, 0.16)
-      .setDepth(34)
-      .setStrokeStyle(5, 0xff4a4a, 0.8);
-    const line = this.add.rectangle(mapWidth / 2, dangerTop, mapWidth, 10, 0xfff0aa, 0.78)
-      .setDepth(35);
-    const label = this.add.text(mapWidth / 2, dangerTop - 48, "GROUND SUPPRESSION // REACH UPPER PLATFORMS", {
-      fontFamily: "monospace",
-      fontSize: "28px",
-      color: "#fff0aa",
-      fontStyle: "bold",
-      stroke: "#000000",
-      strokeThickness: 8
-    }).setOrigin(0.5).setDepth(36);
-
-    this.__groundSuppressionObjects = [warning, line, label];
-    this.tweens.add({ targets: [warning, line, label], alpha: 0.36, duration: 220, yoyo: true, repeat: Math.ceil(warningTime / 440), ease: "Sine.easeInOut" });
-    this.cameras.main.shake(420, 0.004 * (this.screenShakeMultiplier || 1));
-
-    for (let i = 0; i < pulses; i++) {
-      this.time.delayedCall(warningTime + i * pulseGap, () => {
-        if (this.gameOver || this.isPhaseTransitioning) return;
-        this.executeGroundSuppressionPulse(dangerTop, dangerBottom, i === pulses - 1);
-      });
-    }
-
-    this.time.delayedCall(warningTime + pulses * pulseGap + 220, () => {
-      this.cleanupGroundSuppression();
-      this.setBossCasting?.(false);
-    });
-  }
-
-  executeGroundSuppressionPulse(dangerTop, dangerBottom, finalPulse = false) {
-    if (!this.player || !this.player.active) return;
-
-    const flash = this.add.rectangle(0, dangerTop, this.map?.widthInPixels || 3840, dangerBottom - dangerTop, 0xff3311, 0.34)
-      .setOrigin(0, 0)
-      .setDepth(37);
-    this.__groundSuppressionObjects.push(flash);
-    this.tweens.add({
-      targets: flash,
-      alpha: 0,
-      duration: 180,
-      onComplete: () => flash.destroy()
-    });
-
-    this.cameras.main.shake(160, 0.010 * (this.screenShakeMultiplier || 1));
-
-    if (this.player.y >= dangerTop && this.player.y <= dangerBottom) {
-      this.damagePlayer(1);
-    }
-
-    if (finalPulse) {
-      this.audioCues?.play?.("gravityFieldCollapse", { volume: 0.36, cooldownMs: 500 });
-    }
-  }
-
-  cleanupGroundSuppression() {
-    if (!this.__groundSuppressionObjects) {
-      this.__groundSuppressionObjects = [];
-      return;
-    }
-
-    for (const obj of this.__groundSuppressionObjects) {
-      if (obj && obj.active) obj.destroy();
-    }
-
-    this.__groundSuppressionObjects = [];
-  }
-
   cancelPendingBattleTimers() {
     const timers = Array.from(this.__trackedBattleTimers || []);
     for (const event of timers) {
@@ -2239,7 +2157,44 @@ export default class BossScene extends Phaser.Scene {
     this.deathSequence.createDeathPulse(color, index);
   }
 
+  cleanupPhaseFourForPlayerDefeat() {
+    this.__ultimateFinaleStarted = true;
+    this.isPhaseTransitioning = false;
+    this.phaseManager?.stopUltimateProtocolLines?.();
+    this.phaseManager?.stopUltimateCountdown?.();
+
+    if (this.__phase4BrotherPressureEvent) {
+      this.__phase4BrotherPressureEvent.remove(false);
+      this.__phase4BrotherPressureEvent = null;
+    }
+
+    this.purgeProtocolSkill?.stopPhase4EndlessBarrage?.();
+    this.thunderstorm?.stop?.();
+    this.phase4ThunderstormSystem?.stop?.();
+    this.rayOfOblivionSkill?.forceClearPhase4SweepVisuals?.();
+    this.rayOfOblivionSkill?.cleanup?.({ preserveForcedPhase4Radial: false });
+    this.massEnergyTurretsSkill?.cleanupTurrets?.(true);
+    this.cancelPendingBattleTimers?.();
+    this.cleanupRayHostileObjects?.();
+    this.cleanupHostileObjects?.();
+    this.safeDeactivateGravityField?.();
+    this.cameras?.main?.resetFX?.();
+    this.forceResumeSceneClock?.();
+    this.setBossCasting?.(false);
+  }
+
+  handlePlayerDefeat(reason = "player-defeat") {
+    if (this.__playerDefeatStarted || this.__failureSequenceStarted) return false;
+    this.__playerDefeatStarted = true;
+    this.__lastPlayerDefeatReason = reason;
+    this.cleanupPhaseFourForPlayerDefeat();
+    this.failTrial();
+    return true;
+  }
+
   failTrial() {
+    if (this.__failureSequenceStarted) return;
+    this.cleanupPhaseFourForPlayerDefeat?.();
     const survived = this.getSurvivedSeconds?.() ?? Math.max(0, Math.floor(((this.time?.now || 0) - (this.combatStartTime || this.time?.now || 0)) / 1000));
     const integrity = Math.max(0, Math.ceil((this.bossIntegrity / this.bossMaxIntegrity) * 100));
     if (this.ui?.gameOverText) {

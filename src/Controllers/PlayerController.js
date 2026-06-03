@@ -377,7 +377,7 @@ export default class PlayerController {
         this.animationStateMachine?.requestAction("dead", { lockMs: 999999 });
       }
 
-      scene.failTrial();
+      scene.handlePlayerDefeat?.("damagePlayer") ?? scene.failTrial();
     }
 
     return true;

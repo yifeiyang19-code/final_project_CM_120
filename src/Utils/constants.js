@@ -9,7 +9,7 @@ export const ARENA = {
 };
 
 export const PLAYER_STATS = {
-  MAX_HP: 4,
+  MAX_HP: 7,
   IFRAME_MS: 900,
   CONTACT_DAMAGE: 1
 };
