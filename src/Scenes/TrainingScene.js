@@ -96,40 +96,7 @@ export default class TrainingScene extends BossScene {
   }
 
   returnToMainMenu() {
-    if (this.__returningToMenu) return;
-    this.__returningToMenu = true;
-
-    try {
-      this.time.timeScale = 1;
-      this.physics?.world?.resume?.();
-      this.cameras?.main?.resetFX?.();
-      this.trainingLoopEvent?.remove(false);
-      this.trainingLoopEvent = null;
-      this.trainingSelector?.setVisible(false);
-      this.pauseMenuContainer?.setVisible(false);
-      this.__pauseMenuOpen = false;
-      this.controlsLocked = true;
-      this.input?.keyboard?.resetKeys?.();
-      this.bgm?.destroy?.();
-      this.audioCues?.stop?.();
-    } catch (_error) {
-    }
-
-    if (typeof window !== "undefined" && window.location) {
-      try {
-        const url = new URL(window.location.href);
-        url.searchParams.set("menu", String(Date.now()));
-        url.hash = "";
-        window.location.replace(url.toString());
-        return;
-      } catch (_error) {
-        window.location.href = window.location.pathname;
-        return;
-      }
-    }
-
-    this.scene.stop("TrainingScene");
-    this.scene.start("MenuScene", { fromTraining: true });
+    this.safeReturnToMainMenu?.("training-scene");
   }
 
   createTrainingOverlay() {
@@ -416,7 +383,7 @@ export default class TrainingScene extends BossScene {
       skill ? `Focus: ${skill.note}` : "Choose a skill from the selector.",
       `Casts: ${this.trainingCastCount || 0} · Hits taken: ${this.trainingHitCount || 0}`,
       "Gravity locks dash/blink/jump but still allows white tree.",
-      "ESC pause · H hint · R reset drill · M main menu / refresh"
+      "ESC pause · H hint · R reset drill"
     ].join("\n"));
   }
 

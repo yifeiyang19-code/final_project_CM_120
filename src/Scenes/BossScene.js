@@ -559,14 +559,79 @@ export default class BossScene extends Phaser.Scene {
     this.hardRestartGame(reason);
   }
 
-  returnToMainMenu() {
+  safeReturnToMainMenu(source = "main-menu") {
     if (this.__returningToMenu) return;
     this.__returningToMenu = true;
-    this.forceResumeSceneClock?.();
-    this.hidePauseMenu?.();
-    this.cleanupAllBattleObjects?.();
-    this.bgm?.fadeOut?.(150);
-    this.scene.start("MenuScene");
+
+    const safeCall = (fn) => {
+      try {
+        fn?.();
+      } catch (error) {
+        console.warn(`[BossScene] Recovered while returning to main menu from ${source}`, error);
+      }
+    };
+
+    safeCall(() => this.forceResumeSceneClock?.());
+    safeCall(() => {
+      if (this.time) this.time.timeScale = 1;
+      if (this.physics?.world) {
+        this.physics.world.resume?.();
+        this.physics.world.timeScale = 1;
+      }
+    });
+    safeCall(() => this.hidePauseMenu?.());
+    safeCall(() => {
+      this.__pauseMenuOpen = false;
+      this.pauseMenuContainer?.setVisible?.(false);
+      this.controlsLocked = true;
+      this.gameOver = true;
+      this.__allowRestartInput = false;
+    });
+    safeCall(() => this.cancelPendingBattleTimers?.());
+    safeCall(() => this.trainingLoopEvent?.remove?.(false));
+    safeCall(() => {
+      this.trainingLoopEvent = null;
+      this.trainingSelector?.setVisible?.(false);
+    });
+    safeCall(() => this.attackLoop?.cancel?.());
+    safeCall(() => { this.attackLoopToken = (this.attackLoopToken || 0) + 1; });
+    safeCall(() => this.thunderstorm?.stop?.());
+    safeCall(() => this.phase4Thunderstorm?.stop?.());
+    safeCall(() => this.stopPhase4PressureSystems?.());
+    safeCall(() => this.cleanupPhase4PressureSystems?.());
+    safeCall(() => this.cleanupPhase4SweepObjects?.());
+    safeCall(() => this.cleanupRayHostileObjects?.());
+    safeCall(() => this.cleanupHostileObjects?.());
+    safeCall(() => this.safeDeactivateGravityField?.());
+    safeCall(() => this.massEnergyTurretsSkill?.cleanupTurrets?.(true));
+    safeCall(() => this.purgeProtocolSkill?.cleanup?.());
+    safeCall(() => this.rayOfOblivionSkill?.cleanup?.({ preserveForcedPhase4Radial: false }));
+    safeCall(() => this.menacingAdvanceSkill?.cleanupChargeObjects?.());
+    safeCall(() => this.bossMovement?.cleanup?.());
+    safeCall(() => this.healthPacks?.cleanup?.());
+    safeCall(() => this.dialogue?.clear?.());
+    safeCall(() => this.audioCues?.stop?.());
+    safeCall(() => this.bgm?.destroy?.());
+    safeCall(() => {
+      this.cameras?.main?.resetFX?.();
+      this.cameras?.main?.setZoom?.(1);
+      this.cameras?.main?.stopFollow?.();
+    });
+    safeCall(() => this.input?.keyboard?.resetKeys?.());
+
+    safeCall(() => {
+      this.tweens?.killAll?.();
+      this.sound?.stopAll?.();
+    });
+
+    this.time?.delayedCall?.(0, () => {
+      safeCall(() => this.scene.stop(this.scene.key));
+      safeCall(() => this.scene.start("MenuScene", { fromGameplay: true }));
+    });
+  }
+
+  returnToMainMenu() {
+    this.safeReturnToMainMenu("boss-scene");
   }
 
   registerSceneCleanup() {
